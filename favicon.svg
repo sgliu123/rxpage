@@ -1,6 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-  <circle cx="46" cy="34" r="18" stroke="#333" stroke-width="2" fill="none"/>
-  <path d="M22 68 Q46 61 72 69" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-  <path d="M30 77 Q47 71 63 78" stroke="#777" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-  <path d="M38 84 Q49 79 59 86" stroke="#999" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="60%" stop-color="#FF8C00"/>
+      <stop offset="100%" stop-color="#E05000"/>
+    </radialGradient>
+  </defs>
+  <!-- 太阳（渐变圆） -->
+  <circle cx="46" cy="34" r="18" fill="url(#sunGrad)" stroke="#CC5500" stroke-width="1.5"/>
+  <!-- 水波（淡金色半透明） -->
+  <path d="M22 68 Q46 61 72 69" stroke="#E09040" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".8"/>
+  <path d="M30 77 Q47 71 63 78" stroke="#E09040" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".6"/>
+  <path d="M38 84 Q49 79 59 86" stroke="#E09040" stroke-width="1" fill="none" stroke-linecap="round" opacity=".4"/>
 </svg>
