@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台 · 胡若歇成长足迹</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+:root{--ink:#2B2B2B;--paper:#F7F4ED;--tea:#8A8A8A;--line:#E8E3D8;--card:#FFFEFB}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif;line-height:1.8;animation:pageIn 1.2s ease both}
+@keyframes pageIn{from{opacity:0}to{opacity:1}}
+button{font-family:inherit}
+.hide{display:none!important}
+
+/* 登录 */
+#loginView{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#loginView svg{width:56px;margin-bottom:22px}
+#loginView .motto{color:var(--tea);font-size:14px;letter-spacing:.2em;margin-bottom:36px}
+#loginForm{display:flex;flex-direction:column;gap:14px;width:min(320px,90vw)}
+input,textarea{padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:15px;font-family:inherit;color:var(--ink);outline:none;transition:border-color .3s}
+input:focus,textarea:focus{border-color:var(--tea)}
+.btn{padding:13px 24px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:10px;font-size:14px;letter-spacing:.25em;cursor:pointer;transition:opacity .3s}
+.btn:hover{opacity:.85}
+.btn.ghost{background:none;color:var(--ink)}
+.btn.small{padding:8px 18px;font-size:13px;letter-spacing:.1em}
+#loginErr{color:#A0522D;font-size:13px;min-height:20px}
+
+/* 主界面 */
+header.bar{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(247,244,237,.92);backdrop-filter:blur(6px);z-index:10}
+.bar .brand{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:.1em}
+.bar .brand svg{width:30px}
+.bar .acts{display:flex;gap:10px;flex-wrap:wrap}
+.wrap{max-width:820px;margin:0 auto;padding:28px 20px 90px}
+h3.sec{font-size:15px;letter-spacing:.2em;color:var(--tea);margin:34px 0 14px;font-weight:500}
+
+/* 表单 */
+#entryForm{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label.t{font-size:13px;color:var(--tea);letter-spacing:.1em;margin-bottom:-6px}
+textarea{min-height:110px;resize:vertical}
+.hint{font-size:12px;color:var(--tea)}
+#fileBtn{display:inline-block;padding:12px;border:1px dashed var(--tea);border-radius:10px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
+#fileBtn:hover{border-color:var(--ink);color:var(--ink)}
+#thumbBar{display:flex;flex-wrap:wrap;gap:10px}
+#thumbBar .th{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+#thumbBar .thv{font-size:12px;color:var(--tea);align-self:center}
+#prog{font-size:13px;color:var(--tea);min-height:20px}
+#saying{margin-top:18px;text-align:center;color:var(--tea);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
+#saying.on{opacity:1}
+
+/* 条目管理 */
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:flex;gap:14px;align-items:center}
+.item .info{flex:1;min-width:0}
+.item .t1{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t2{font-size:12px;color:var(--tea);letter-spacing:.1em}
+.item .thumbs{display:flex;gap:6px}
+.item .thumbs img{width:38px;height:38px;border-radius:8px;object-fit:cover}
+.item button{padding:7px 14px;font-size:12px;letter-spacing:.05em;border:1px solid var(--line);background:none;border-radius:8px;cursor:pointer;color:var(--tea)}
+.item button:hover{color:var(--ink);border-color:var(--ink)}
+.item button.danger:hover{color:#A0522D;border-color:#A0522D}
+#adminList .empty{color:var(--tea);text-align:center;padding:36px 0;letter-spacing:.15em}
+.toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 28px;border-radius:999px;font-size:13px;letter-spacing:.1em;opacity:0;transition:opacity .5s;pointer-events:none;z-index:99}
+.toast.on{opacity:.95}
+@media(max-width:560px){.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div id="loginView">
+  <svg viewBox="0 0 96 96"><circle cx="48" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 66 Q48 60 74 66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".75"/><path d="M30 75 Q48 70 66 75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".45"/></svg>
+  <p class="motto">记录你的成长，也是父母修心的过程</p>
+  <form id="loginForm">
+    <input type="password" id="pwd" placeholder="请输入密码" autocomplete="current-password">
+    <button class="btn" type="submit">入 内</button>
+    <div id="loginErr"></div>
+  </form>
+</div>
+
+<!-- 后台 -->
+<div id="appView" class="hide">
+<header class="bar">
+  <div class="brand">
+    <svg viewBox="0 0 96 96"><circle cx="48" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 66 Q48 60 74 66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg>
+    若歇 · 记录
+  </div>
+  <div class="acts">
+    <button class="btn small ghost" id="expJson">导出 JSON</button>
+    <button class="btn small ghost" id="expMd">导出 Markdown</button>
+    <button class="btn small ghost" id="logout">退出</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <h3 class="sec">记 录 成 长</h3>
+  <form id="entryForm">
+    <div class="row2">
+      <div><label class="t">标题（必填）</label><input id="fTitle" placeholder="例如：第一次微笑"></div>
+      <div><label class="t">事发日期（必填）</label><input id="fDate" type="date"></div>
+    </div>
+    <div><label class="t">文字说明</label><textarea id="fContent" placeholder="今天发生了什么……"></textarea></div>
+    <div>
+      <label class="t">照片（浏览器本地压缩为 WebP，单张 ≤200KB）</label>
+      <label id="fileBtn">选择照片（可多选）<input id="fImgs" type="file" accept="image/*" multiple hidden></label>
+      <div id="thumbBar"></div>
+    </div>
+    <div>
+      <label class="t">极短留念片段（≤30秒，≤5MB；更长请传B站）</label>
+      <input id="fVideo" type="file" accept="video/mp4">
+      <div class="hint" id="vHint">未选择</div>
+    </div>
+    <div>
+      <label class="t">B 站视频链接（每行一个，仅支持 30 秒以上长视频）</label>
+      <textarea id="fBili" placeholder="https://www.bilibili.com/video/BVxxxx" style="min-height:70px"></textarea>
+    </div>
+    <div id="prog"></div>
+    <button class="btn" type="submit" id="saveBtn">保 存 这 一 刻</button>
+    <div id="saying"></div>
+  </form>
+
+  <h3 class="sec">已 有 记 录</h3>
+  <div id="adminList"></div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'https://baby-growth-api.你的用户名.workers.dev'; // ← 改成你的 Worker 域名
+const SAYINGS = ['歇心一处，无事不办。','水止月现，念息心明。','不急不躁，慢慢长大。','记录的此刻，即是安住的此刻。','狂心顿歇，当下即是。','愿你慢慢长大，愿我们陪你一起，狂性自歇。'];
+let token = localStorage.getItem('rx_token') || '';
+let editingId = null;
+let pickedFiles = [];      // 待压缩图片 File 列表
+let videoFile = null;
+const $ = id => document.getElementById(id);
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 2400);
+}
+function saying(){
+  const s = SAYINGS[Math.floor(Math.random()*SAYINGS.length)];
+  const el = $('saying'); el.textContent = s; el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'), 6000);
+}
+function authH(){ return { 'Authorization':'Bearer '+token }; }
+
+/* ---------- 登录 ---------- */
+$('loginForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  $('loginErr').textContent = '';
+  const r = await fetch(API_BASE+'/api/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: $('pwd').value })
+  });
+  const d = await r.json();
+  if(!r.ok){ $('loginErr').textContent = d.error || '登录失败'; return; }
+  token = d.token; localStorage.setItem('rx_token', token);
+  enter();
+});
+function logout(){ token=''; localStorage.removeItem('rx_token'); location.reload(); }
+$('logout').addEventListener('click', logout);
+
+function enter(){
+  $('loginView').classList.add('hide');
+  $('appView').classList.remove('hide');
+  $('fDate').value = new Date().toISOString().slice(0,10);
+  loadAdminList();
+}
+(async()=>{ // 自动尝试已有 token
+  if(!token) return;
+  const r = await fetch(API_BASE+'/api/entries?size=1', { headers: authH() });
+  if(r.ok) enter();
+})();
+
+/* ---------- 图片本地压缩 ---------- */
+async function compressImage(file){
+  const bmp = await createImageBitmap(file);
+  const MAX = 1200;
+  const s = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  let q = 0.85, blob = null;
+  while (q >= 0.4){
+    blob = await new Promise(r => c.toBlob(r, 'image/webp', q));
+    if (blob && blob.size <= 200*1024) break;
+    q -= 0.15;
+  }
+  if (!blob || blob.size > 500*1024) throw new Error('「'+file.name+'」压缩后仍过大，请换一张');
+  return blob;
+}
+
+$('fImgs').addEventListener('change', async e=>{
+  const files = [...e.target.files];
+  $('thumbBar').innerHTML = ''; pickedFiles = [];
+  for (const f of files.slice(0, 30)){
+    $('prog').textContent = '正在本地压缩 '+f.name+' …';
+    try{
+      const blob = await compressImage(f);
+      pickedFiles.push({ blob, name: f.name });
+      const img = document.createElement('img');
+      img.className = 'th'; img.src = URL.createObjectURL(blob);
+      $('thumbBar').appendChild(img);
+    }catch(err){ toast(err.message); }
+  }
+  $('prog').textContent = '共 '+pickedFiles.length+' 张照片已就绪（压缩后合计约 '+Math.round(pickedFiles.reduce((a,b)=>a+b.blob.size,0)/1024)+' KB）';
+});
+
+$('fVideo').addEventListener('change', e=>{
+  videoFile = e.target.files[0] || null;
+  if(!videoFile){ $('vHint').textContent = '未选择'; return; }
+  if(videoFile.size > 5*1024*1024){ toast('视频超过 5MB，请本地压缩后再选'); e.target.value=''; videoFile=null; $('vHint').textContent='未选择'; return; }
+  $('vHint').textContent = '已选择：'+videoFile.name+'（'+(videoFile.size/1024/1024).toFixed(2)+' MB）';
+});
+
+/* ---------- 上传与保存 ---------- */
+async function uploadBlob(blob, ext){
+  const r = await fetch(API_BASE+'/api/upload', {
+    method:'POST', headers:{ ...authH(), 'Content-Type':'application/octet-stream', 'X-File-Ext': ext },
+    body: blob
+  });
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.error || '上传失败');
+  return d;
+}
+
+function parseBilis(){
+  return $('fBili').value.split('\n').map(line=>{
+    const m = line.match(/BV[a-zA-Z0-9]+/);
+    return m ? { type:'bili', bvid: m[0] } : null;
+  }).filter(Boolean);
+}
+
+$('entryForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  if(editingId === null && !pickedFiles.length && !videoFile && !$('fBili').value.trim() && !$('fContent').value.trim()){
+    toast('请至少填写内容、选择照片或添加链接'); return;
+  }
+  $('saveBtn').disabled = true;
+  try{
+    const media = [];
+    for (let i=0; i<pickedFiles.length; i++){
+      $('prog').textContent = '上传照片 '+(i+1)+'/'+pickedFiles.length+' …';
+      const d = await uploadBlob(pickedFiles[i].blob, 'webp');
+      media.push({ type:'image', key:d.key });
+    }
+    if(videoFile){
+      $('prog').textContent = '上传短视频 …';
+      const d = await uploadBlob(videoFile, 'mp4');
+      media.push({ type:'video', key:d.key });
+    }
+    media.push(...parseBilis());
+
+    const payload = {
+      title: $('fTitle').value, event_date: $('fDate').value,
+      content: $('fContent').value, media
+    };
+    $('prog').textContent = '写入数据库 …';
+    const url = editingId ? API_BASE+'/api/entries/'+editingId : API_BASE+'/api/entries';
+    const r = await fetch(url, { method: editingId?'PUT':'POST', headers:{...authH(),'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || '保存失败');
+
+    $('prog').textContent = '已保存 ✓';
+    toast(editingId ? '已更新' : '已保存');
+    saying();
+    resetForm();
+    loadAdminList();
+  }catch(err){ toast(err.message); $('prog').textContent=''; }
+  $('saveBtn').disabled = false;
+});
+
+function resetForm(){
+  editingId = null; pickedFiles = []; videoFile = null;
+  $('fTitle').value=''; $('fContent').value=''; $('fBili').value='';
+  $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
+  $('thumbBar').innerHTML=''; $('prog').textContent='';
+  $('saveBtn').textContent = '保 存 这 一 刻';
+  $('fDate').value = new Date().toISOString().slice(0,10);
+}
+
+/* ---------- 条目管理 ---------- */
+async function loadAdminList(){
+  const r = await fetch(API_BASE+'/api/entries?size=100', { headers: authH() });
+  if(r.status === 401){ logout(); return; }
+  const d = await r.json();
+  const box = $('adminList');
+  if(!d.list || !d.list.length){ box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  box.innerHTML = d.list.map(e=>{
+    const imgs = e.media.filter(m=>m.type==='image').slice(0,3);
+    const extra = e.media.length - imgs.length;
+    return `<div class="item">
+      <div class="info">
+        <div class="t1">${esc(e.title)}</div>
+        <div class="t2">${e.event_date} · ${e.media.length} 个媒体</div>
+      </div>
+      <div class="thumbs">${imgs.map(m=>`<img src="${API_BASE}${m.url}" loading="lazy">`).join('')}${extra>0?`<span class="t2">+${extra}</span>`:''}</div>
+      <button data-edit="${e.id}">编辑</button>
+      <button class="danger" data-del="${e.id}" data-title="${esc(e.title)}">删除</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('确定删除「'+b.dataset.title+'」？关联图片将一并清除。')) return;
+    const r = await fetch(API_BASE+'/api/entries/'+b.dataset.del, { method:'DELETE', headers: authH() });
+    if(r.ok){ toast('已删除'); loadAdminList(); } else toast('删除失败');
+  }));
+  box.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>loadForEdit(d.list.find(x=>x.id==b.dataset.edit))));
+}
+
+function loadForEdit(e){
+  editingId = e.id;
+  $('fTitle').value = e.title; $('fDate').value = e.event_date; $('fContent').value = e.content || '';
+  const bilis = e.media.filter(m=>m.type==='bili').map(m=>'https://www.bilibili.com/video/'+m.bvid);
+  $('fBili').value = bilis.join('\n');
+  pickedFiles = []; videoFile = null; $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
+  $('thumbBar').innerHTML = e.media.filter(m=>m.type==='image').map(m=>`<img class="th" src="${API_BASE}${m.url}">`).join('')
+    + (e.media.some(m=>m.type==='video') ? '<span class="thv">原视频保留</span>' : '');
+  window.scrollTo({top:0, behavior:'smooth'});
+  $('saveBtn').textContent = '更 新 这 一 刻';
+  toast('已载入编辑，原有图片保留；新选照片将追加');
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ---------- 导出备份 ---------- */
+async function doExport(kind){
+  const r = await fetch(API_BASE+'/api/export', { headers: authH() });
+  if(!r.ok){ toast('导出失败，请重新登录'); return; }
+  const d = await r.json();
+  const stamp = new Date().toISOString().slice(0,10);
+  if(kind==='json') download('成长足迹备份-'+stamp+'.json', JSON.stringify(d.json, null, 2), 'application/json');
+  else download('成长足迹备份-'+stamp+'.md', d.markdown, 'text/markdown');
+  toast('已导出 '+d.count+' 条记录');
+}
+function download(name, text, type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+}
+$('expJson').addEventListener('click', ()=>doExport('json'));
+$('expMd').addEventListener('click', ()=>doExport('md'));
+</script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>胡若歇 · 成长足迹</title>
+<meta name="description" content="狂性自歇，歇即菩提。记录胡若歇的成长足迹。">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+:root{--ink:#2B2B2B;--paper:#F7F4ED;--tea:#8A8A8A;--card:#FFFEFB;--line:#E8E3D8}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif;line-height:1.8;animation:pageIn 1.5s ease both}
+@keyframes pageIn{from{opacity:0}to{opacity:1}}
+a{color:var(--tea);text-decoration:none}
+a:hover{color:var(--ink)}
+
+/* 首屏 */
+.hero{min-height:92vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px}
+.logo{width:96px;color:var(--ink);margin-bottom:28px;animation:settle 4s ease both}
+@keyframes settle{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.halo{opacity:.07;transition:opacity 3s ease}
+body.still .halo{opacity:.16}
+.wave{opacity:var(--o);animation:breathe 6s ease-in-out infinite;transition:opacity 2.5s ease}
+.w1{animation-delay:0s}.w2{animation-delay:.9s}.w3{animation-delay:1.8s}
+@keyframes breathe{0%,100%{opacity:var(--o)}50%{opacity:calc(var(--o)*.35)}}
+body.still .wave{animation:none;opacity:calc(var(--o)*.25)}
+.moon{transition:stroke-width 3s ease}
+body.still .moon{stroke-width:2.6}
+.hero h1{font-size:clamp(26px,4.5vw,40px);font-weight:500;letter-spacing:.12em;animation:riseIn 1.6s .4s ease both}
+.hero .zen{margin-top:22px;font-size:clamp(17px,2.6vw,22px);letter-spacing:.35em;color:var(--ink);animation:riseIn 1.8s .9s ease both}
+.hero .src{margin-top:8px;font-size:13px;letter-spacing:.2em;color:var(--tea);animation:riseIn 1.8s 1.2s ease both}
+.hero .sub{margin-top:18px;font-size:14px;color:var(--tea);letter-spacing:.15em;animation:riseIn 1.8s 1.5s ease both}
+.scroll-hint{position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:12px;letter-spacing:.3em;color:var(--tea);animation:hint 3s 2.5s ease infinite both}
+@keyframes hint{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:.7;transform:translateY(6px)}}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* 列表 */
+main{max-width:760px;margin:0 auto;padding:20px 20px 60px}
+.entry{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 26px 22px;margin:0 0 26px;box-shadow:0 1px 6px rgba(43,43,43,.04);opacity:0;transform:translateY(18px);transition:opacity .9s ease,transform .9s ease,box-shadow .4s ease}
+.entry.show{opacity:1;transform:none}
+.entry:hover{box-shadow:0 6px 22px rgba(43,43,43,.08)}
+.entry h2{font-size:19px;font-weight:600;letter-spacing:.04em}
+.entry .date{font-size:12.5px;color:var(--tea);letter-spacing:.12em;margin:4px 0 10px}
+.entry .content{white-space:pre-wrap;font-size:15px}
+.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
+.media img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;opacity:0;transition:opacity .8s ease;background:#EFEBE2}
+.media img.loaded{opacity:1}
+.media video{width:100%;border-radius:12px;margin-top:6px}
+.bili{grid-column:1/-1;margin-top:8px}
+.bili-btn{width:100%;padding:14px;border:1px dashed var(--tea);border-radius:12px;background:none;color:var(--tea);font-size:13px;letter-spacing:.1em;cursor:pointer;font-family:inherit}
+.bili-btn:hover{color:var(--ink);border-color:var(--ink)}
+.bili iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px}
+.more{text-align:center;padding:10px 0 50px}
+.more button{padding:12px 44px;border:1px solid var(--ink);background:none;border-radius:999px;font-size:14px;letter-spacing:.25em;color:var(--ink);cursor:pointer;font-family:inherit;transition:all .4s ease}
+.more button:hover{background:var(--ink);color:var(--paper)}
+.empty{text-align:center;color:var(--tea);padding:80px 0;letter-spacing:.15em}
+
+/* 页脚 */
+footer{text-align:center;padding:50px 20px 70px;color:var(--tea);font-size:13px;letter-spacing:.15em;border-top:1px solid var(--line)}
+footer .foot-logo{width:40px;color:var(--tea);margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<header class="hero" id="hero">
+  <svg class="logo" viewBox="0 0 96 96" aria-label="月照止水">
+    <circle class="halo" cx="48" cy="35" r="27" fill="currentColor" stroke="none"/>
+    <circle class="moon" cx="48" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path class="wave w1" style="--o:.75" d="M22 66 Q48 60 74 66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <path class="wave w2" style="--o:.45" d="M30 75 Q48 70 66 75" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    <path class="wave w3" style="--o:.22" d="M38 83 Q48 79 58 83" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+  </svg>
+  <h1>胡若歇 · 成长足迹</h1>
+  <p class="zen">狂性自歇，歇即菩提</p>
+  <p class="src">—— 《楞严经》</p>
+  <p class="sub">不逐虚妄，心自清明</p>
+  <p class="scroll-hint">向下 · 走进日常</p>
+</header>
+
+<main id="list"></main>
+<div class="more" id="moreWrap" style="display:none"><button id="moreBtn">加载更多</button></div>
+
+<footer>
+  <svg class="foot-logo" viewBox="0 0 96 96"><circle cx="48" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 66 Q48 60 74 66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+  <p>愿你慢慢长大，愿我们陪你一起，狂性自歇。</p>
+  <p style="margin-top:8px"><a href="about.html">名字的由来</a></p>
+</footer>
+
+<script>
+const API_BASE = 'https://baby-growth-api.你的用户名.workers.dev'; // ← 部署后改成你的 Worker 域名
+const listEl = document.getElementById('list');
+const moreWrap = document.getElementById('moreWrap');
+let page = 1, loading = false, done = false;
+const SIZE = 20;
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function cardHTML(e){
+  let media = '';
+  const imgs = e.media.filter(m=>m.type==='image');
+  const vids = e.media.filter(m=>m.type==='video');
+  const bilis = e.media.filter(m=>m.type==='bili');
+  if(imgs.length) media += '<div class="media">'+imgs.map(m=>
+    `<img loading="lazy" src="${API_BASE}${m.url}" alt="${esc(e.title)}">`).join('')+'</div>';
+  if(vids.length) media += '<div class="media">'+vids.map(m=>
+    `<video controls preload="none" src="${API_BASE}${m.url}"></video>`).join('')+'</div>';
+  if(bilis.length) media += bilis.map(m=>
+    `<div class="bili"><button class="bili-btn" data-bv="${m.bvid}">▶ 播放 B 站视频（${m.bvid}）</button></div>`).join('');
+  return `<article class="entry">
+    <h2>${esc(e.title)}</h2>
+    <div class="date">${esc(e.event_date)}</div>
+    ${e.content?`<div class="content">${esc(e.content)}</div>`:''}
+    ${media}
+  </article>`;
+}
+
+async function load(){
+  if(loading||done) return;
+  loading = true;
+  try{
+    const r = await fetch(`${API_BASE}/api/entries?page=${page}&size=${SIZE}&t=${Date.now()}`);
+    const d = await r.json();
+    if(!d.list || !d.list.length){
+      done = true;
+      if(page===1) listEl.innerHTML = '<div class="empty">第一条记录，等待落笔。</div>';
+      moreWrap.style.display='none';
+      return;
+    }
+    listEl.insertAdjacentHTML('beforeend', d.list.map(cardHTML).join(''));
+    observeCards();
+    if(d.page*d.size >= d.total){ done=true; moreWrap.style.display='none'; }
+    else { moreWrap.style.display='block'; page++; }
+  }catch(err){
+    listEl.innerHTML = '<div class="empty">暂时无法连接云端，请稍后再试。</div>';
+  }
+  loading = false;
+}
+
+let cardIO;
+function observeCards(){
+  if(!cardIO) cardIO = new IntersectionObserver(es=>{
+    es.forEach(en=>{
+      if(en.isIntersecting){
+        en.target.classList.add('show');
+        cardIO.unobserve(en.target);
+      }
+    });
+  },{threshold:.08});
+  document.querySelectorAll('.entry:not(.show)').forEach(el=>cardIO.observe(el));
+  document.querySelectorAll('.media img').forEach(img=>{
+    if(img.complete) img.classList.add('loaded');
+    else img.addEventListener('load',()=>img.classList.add('loaded'),{once:true});
+  });
+}
+
+listEl.addEventListener('click',e=>{
+  const btn = e.target.closest('.bili-btn');
+  if(!btn) return;
+  const bv = btn.dataset.bv;
+  btn.parentElement.innerHTML = `<iframe src="https://player.bilibili.com/player.html?bvid=${bv}&autoplay=0" allowfullscreen scrolling="no" frameborder="0"></iframe>`;
+});
+
+document.getElementById('moreBtn').addEventListener('click',load);
+load();
+
+/* 静止即歇：安静 4 秒，水波渐止 */
+let idleTimer;
+function wake(){
+  document.body.classList.remove('still');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(()=>document.body.classList.add('still'), 4000);
+}
+['mousemove','scroll','touchstart','keydown'].forEach(ev=>window.addEventListener(ev,wake,{passive:true}));
+setTimeout(wake, 2500);
+</script>
+</body>
+</html>
