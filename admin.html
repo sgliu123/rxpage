@@ -44,7 +44,7 @@ textarea{min-height:110px;resize:vertical}
 #fileBtn{display:block;padding:14px;border:1.5px dashed var(--tea);border-radius:12px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
 #fileBtn:hover{border-color:var(--ink);color:var(--ink);background:rgba(160,82,45,.04)}
 
-/* 缩略图：放大区域 + 删除按钮 */
+/* 缩略图 */
 #thumbBar{display:flex;flex-wrap:wrap;gap:12px;min-height:24px}
 #thumbBar .th-item{position:relative;width:116px;height:116px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--line);animation:pop .25s ease both}
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
@@ -57,6 +57,15 @@ textarea{min-height:110px;resize:vertical}
 #prog{font-size:13px;color:var(--tea);min-height:20px}
 #saying{margin-top:8px;text-align:center;color:var(--accent);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
 #saying.on{opacity:1}
+
+/* B站标签 */
+.bili-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.bili-tag{display:inline-flex;align-items:center;gap:6px;background:#e8e3d8;padding:4px 12px;border-radius:20px;font-size:13px}
+.bili-tag .del-bili{background:none;border:none;cursor:pointer;color:#8a8a8a;font-size:14px;line-height:1;padding:0 2px}
+.bili-tag .del-bili:hover{color:#a0522d}
+.bili-add-row{display:flex;gap:8px;margin-top:4px}
+.bili-add-row input{flex:1;padding:10px 14px;font-size:14px}
+.bili-add-row button{padding:10px 20px;font-size:13px;white-space:nowrap}
 
 /* 条目管理 */
 .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;display:flex;gap:14px;align-items:center;transition:box-shadow .3s}
@@ -120,9 +129,15 @@ textarea{min-height:110px;resize:vertical}
       <input id="fVideo" type="file" accept="video/mp4">
       <div class="hint" id="vHint">未选择</div>
     </div>
+    <!-- B站区域：改为输入框+添加按钮+标签列表 -->
     <div>
-      <label class="t">B 站视频链接（每行一个，仅支持 30 秒以上长视频）</label>
-      <textarea id="fBili" placeholder="https://www.bilibili.com/video/BVxxxx" style="min-height:70px"></textarea>
+      <label class="t">B 站视频链接（支持多个，可逐个添加和删除）</label>
+      <div class="bili-add-row">
+        <input id="biliInput" placeholder="粘贴B站链接，如 https://www.bilibili.com/video/BVxxxx" />
+        <button type="button" id="biliAddBtn" class="btn small ghost">添加</button>
+      </div>
+      <div id="biliTags" class="bili-tags"></div>
+      <small class="hint">输入后点击“添加”或按回车，每个链接可单独删除</small>
     </div>
     <div id="prog"></div>
     <button class="btn" type="submit" id="saveBtn">保 存 这 一 刻</button>
@@ -161,6 +176,7 @@ let editingId = null;
 let pickedFiles = [];      // 本次新选的待上传图片 {blob,name}
 let existingMedia = [];    // 编辑时已有的媒体（全程累计保留，可删除其中项）
 let videoFile = null;
+let biliItems = [];        // 当前B站链接列表 {bvid, url}
 let allEntries = [];       // 缓存列表，供编辑载入
 const $ = id => document.getElementById(id);
 
@@ -215,20 +231,16 @@ async function compressImage(file){
   let q = 0.85, blob = null;
   while (q >= 0.4){
     blob = await new Promise(r => c.toBlob(r, 'image/webp', q));
-    if (blob && blob.size <= 200*1024) break;
+    if (blob && blob.size <= 200 * 1024) break;
     q -= 0.15;
   }
-  if (!blob || blob.size > 500*1024) throw new Error('「'+file.name+'」压缩后仍过大，请换一张');
+  if (!blob || blob.size > 500 * 1024) throw new Error('「'+file.name+'」压缩后仍过大，请换一张');
   return blob;
 }
 
-/* ---------- 缩略图渲染（核心：删除功能） ----------
-   用事件委托绑定删除：删除按钮统一在 thumbBar 上监听，
-   彻底避免动态元素绑定失效的问题。
--------------------------------------- */
+/* ---------- 缩略图渲染 ---------- */
 function renderThumbs(){
   const bar = $('thumbBar'); bar.innerHTML = '';
-  // 合并：原图（existingMedia）+ 新图（pickedFiles），每项带 stable id
   const all = [
     ...existingMedia.map((m, i)=>({ kind:'existing', ref:m, id:'ex'+i })),
     ...pickedFiles.map((f, i)=>({ kind:'picked', ref:f, id:'pk'+i }))
@@ -253,13 +265,11 @@ function renderThumbs(){
     del.onclick = e=>{
       e.stopPropagation();
       if(item.kind==='picked'){
-        // 从待上传列表中移除（按对象引用精确匹配）
         pickedFiles = pickedFiles.filter(x=>x!==item.ref);
       } else {
-        // 从已有媒体中移除
         existingMedia = existingMedia.filter(x=>x!==item.ref);
       }
-      renderThumbs(); // 重渲染，无需重新绑定——靠下方事件委托
+      renderThumbs();
       updateProg();
     };
     wrap.appendChild(del);
@@ -268,7 +278,7 @@ function renderThumbs(){
   if(!all.length){ const e=document.createElement('span'); e.className='thv'; e.textContent='暂无媒体'; bar.appendChild(e); }
 }
 
-// 统一用事件委托监听删除（兜底，双重保障）
+// 事件委托（兜底）
 $('thumbBar').addEventListener('click', e=>{
   const del = e.target.closest('.del');
   if(!del) return;
@@ -301,14 +311,60 @@ $('fImgs').addEventListener('change', async e=>{
   }
   renderThumbs();
   updateProg();
-  e.target.value = ''; // 清空选择，允许重复选同一批
+  e.target.value = '';
 });
 
 $('fVideo').addEventListener('change', e=>{
   videoFile = e.target.files[0] || null;
   if(!videoFile){ $('vHint').textContent = '未选择'; return; }
-  if(videoFile.size > 5*1024*1024){ toast('视频超过 5MB，请本地压缩后再选'); e.target.value=''; videoFile=null; $('vHint').textContent='未选择'; return; }
+  if(videoFile.size > 5 * 1024 * 1024){ toast('视频超过 5MB，请本地压缩后再选'); e.target.value=''; videoFile=null; $('vHint').textContent='未选择'; return; }
   $('vHint').textContent = '已选择：'+videoFile.name+'（'+(videoFile.size/1024/1024).toFixed(2)+' MB）';
+});
+
+/* ---------- B站多链接管理 ---------- */
+function normalizeBiliLink(raw){
+  if(!raw) return null;
+  raw = raw.trim();
+  const m = raw.match(/BV[a-zA-Z0-9]+/);
+  if(!m) return null;
+  return { bvid: m[0], url: raw };
+}
+
+function renderBiliTags(){
+  const container = $('biliTags');
+  container.innerHTML = '';
+  biliItems.forEach((item, idx)=>{
+    const tag = document.createElement('span');
+    tag.className = 'bili-tag';
+    tag.innerHTML = `${esc(item.bvid)} <button type="button" class="del-bili" data-idx="${idx}">✕</button>`;
+    container.appendChild(tag);
+  });
+  // 删除按钮事件（直接用事件委托也可以，这里直接绑定）
+  container.querySelectorAll('.del-bili').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const idx = parseInt(this.dataset.idx);
+      biliItems.splice(idx, 1);
+      renderBiliTags();
+    });
+  });
+}
+
+function addBiliFromInput(){
+  const inp = $('biliInput');
+  const raw = inp.value.trim();
+  if(!raw) return;
+  const norm = normalizeBiliLink(raw);
+  if(!norm){ toast('无法识别B站链接，请包含BV号'); return; }
+  // 去重（按bvid）
+  if(biliItems.some(x=>x.bvid===norm.bvid)){ toast('该B站视频已添加'); inp.value=''; return; }
+  biliItems.push(norm);
+  inp.value = '';
+  renderBiliTags();
+}
+
+$('biliAddBtn').addEventListener('click', addBiliFromInput);
+$('biliInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); addBiliFromInput(); }
 });
 
 /* ---------- 上传与保存 ---------- */
@@ -322,16 +378,13 @@ async function uploadBlob(blob, ext){
   return d;
 }
 
-function parseBilis(){
-  return $('fBili').value.split('\n').map(line=>{
-    const m = line.match(/BV[a-zA-Z0-9]+/);
-    return m ? { type:'bili', bvid: m[0] } : null;
-  }).filter(Boolean);
+function getBiliPayload(){
+  return biliItems.map(item=>({ type:'bili', bvid: item.bvid }));
 }
 
 $('entryForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  if(editingId === null && !pickedFiles.length && !videoFile && !$('fBili').value.trim() && !$('fContent').value.trim()){
+  if(editingId === null && !pickedFiles.length && !videoFile && !biliItems.length && !$('fContent').value.trim()){
     toast('请至少填写内容、选择照片或添加链接'); return;
   }
   $('saveBtn').disabled = true;
@@ -351,7 +404,7 @@ $('entryForm').addEventListener('submit', async e=>{
       const d = await uploadBlob(videoFile, 'mp4');
       media.push({ type:'video', key:d.key });
     }
-    media.push(...parseBilis());
+    media.push(...getBiliPayload());
 
     const payload = {
       title: $('fTitle').value, event_date: $('fDate').value,
@@ -374,9 +427,10 @@ $('entryForm').addEventListener('submit', async e=>{
 
 function resetForm(){
   editingId = null; pickedFiles = []; existingMedia = []; videoFile = null;
-  $('fTitle').value=''; $('fContent').value=''; $('fBili').value='';
+  biliItems = [];
+  $('fTitle').value=''; $('fContent').value=''; $('biliInput').value='';
   $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
-  $('thumbBar').innerHTML=''; $('prog').textContent='';
+  $('thumbBar').innerHTML=''; $('biliTags').innerHTML=''; $('prog').textContent='';
   $('saveBtn').textContent = '保 存 这 一 刻';
   $('fDate').value = new Date().toISOString().slice(0,10);
 }
@@ -416,11 +470,11 @@ async function loadAdminList(){
 function loadForEdit(e){
   editingId = e.id;
   $('fTitle').value = e.title; $('fDate').value = e.event_date; $('fContent').value = e.content || '';
-  const bilis = (e.media||[]).filter(m=>m.type==='bili').map(m=>'https://www.bilibili.com/video/'+m.bvid);
-  $('fBili').value = bilis.join('\n');
+  // 从media中提取B站链接
+  biliItems = (e.media||[]).filter(m=>m.type==='bili').map(m=>({ bvid: m.bvid, url: 'https://www.bilibili.com/video/'+m.bvid }));
+  renderBiliTags();
   pickedFiles = []; videoFile = null; $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
 
-  // 关键：把已有媒体完整拷进 existingMedia（含图片/B站），全程累计保留
   existingMedia = (e.media||[]).filter(m=>m.type==='image' || m.type==='bili').map(m=>({
     type: m.type, key: m.key, url: m.url, bvid: m.bvid
   }));
