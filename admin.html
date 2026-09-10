@@ -6,7 +6,7 @@
 <title>后台 · 胡若歇成长足迹</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
-:root{--ink:#2B2B2B;--paper:#F7F4ED;--tea:#8A8A8A;--line:#E8E3D8;--card:#FFFEFB}
+:root{--ink:#2B2B2B;--paper:#F7F4ED;--tea:#8A8A8A;--line:#E8E3D8;--card:#FFFEFB;--accent:#A0522D}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif;line-height:1.8;animation:pageIn 1.2s ease both}
 @keyframes pageIn{from{opacity:0}to{opacity:1}}
@@ -32,39 +32,44 @@ header.bar{display:flex;align-items:center;justify-content:space-between;padding
 .bar .brand svg{width:30px}
 .bar .acts{display:flex;gap:10px;flex-wrap:wrap}
 .wrap{max-width:820px;margin:0 auto;padding:28px 20px 90px}
-h3.sec{font-size:15px;letter-spacing:.2em;color:var(--tea);margin:34px 0 14px;font-weight:500}
+h3.sec{font-size:15px;letter-spacing:.2em;color:var(--tea);margin:34px 0 14px;font-weight:500;display:flex;align-items:center;gap:10px}
+h3.sec .line{flex:1;height:1px;background:var(--line)}
 
 /* 表单 */
-#entryForm{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:14px}
+#entryForm{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 14px rgba(43,43,43,.04)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-label.t{font-size:13px;color:var(--tea);letter-spacing:.1em;margin-bottom:-6px}
+label.t{font-size:13px;color:var(--tea);letter-spacing:.1em;margin-bottom:-6px;display:block}
 textarea{min-height:110px;resize:vertical}
 .hint{font-size:12px;color:var(--tea)}
-#fileBtn{display:inline-block;padding:12px;border:1px dashed var(--tea);border-radius:10px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
-#fileBtn:hover{border-color:var(--ink);color:var(--ink)}
+#fileBtn{display:block;padding:14px;border:1.5px dashed var(--tea);border-radius:12px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
+#fileBtn:hover{border-color:var(--ink);color:var(--ink);background:rgba(160,82,45,.04)}
+
 /* 缩略图：放大区域 + 删除按钮 */
-#thumbBar{display:flex;flex-wrap:wrap;gap:12px}
-#thumbBar .th-item{position:relative;width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--line)}
-#thumbBar .th-item img{width:100%;height:100%;object-fit:cover;display:block}
-#thumbBar .th-item .del{position:absolute;top:4px;right:4px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#thumbBar .th-item .del:hover{background:#A0522D}
-#thumbBar .th-item .tag{position:absolute;bottom:4px;left:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);padding:1px 5px;border-radius:4px;max-width:100%;overflow:hidden;white-space:nowrap}
+#thumbBar{display:flex;flex-wrap:wrap;gap:12px;min-height:24px}
+#thumbBar .th-item{position:relative;width:116px;height:116px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--line);animation:pop .25s ease both}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+#thumbBar .th-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+#thumbBar .th-item .del{position:absolute;top:5px;right:5px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+#thumbBar .th-item .del:hover{background:var(--accent)}
+#thumbBar .th-item .tag{position:absolute;bottom:5px;left:5px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:2px 6px;border-radius:5px}
+#thumbBar .th-item.is-new{outline:2px solid var(--accent);outline-offset:-2px}
 #thumbBar .thv{font-size:12px;color:var(--tea);align-self:center}
 #prog{font-size:13px;color:var(--tea);min-height:20px}
-#saying{margin-top:18px;text-align:center;color:var(--tea);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
+#saying{margin-top:8px;text-align:center;color:var(--accent);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
 #saying.on{opacity:1}
 
 /* 条目管理 */
-.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:flex;gap:14px;align-items:center}
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;display:flex;gap:14px;align-items:center;transition:box-shadow .3s}
+.item:hover{box-shadow:0 4px 16px rgba(43,43,43,.06)}
 .item .info{flex:1;min-width:0}
 .item .t1{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item .t2{font-size:12px;color:var(--tea);letter-spacing:.1em}
 .item .thumbs{display:flex;gap:6px}
-.item .thumbs img{width:38px;height:38px;border-radius:8px;object-fit:cover}
-.item button{padding:7px 14px;font-size:12px;letter-spacing:.05em;border:1px solid var(--line);background:none;border-radius:8px;cursor:pointer;color:var(--tea)}
+.item .thumbs img{width:42px;height:42px;border-radius:9px;object-fit:cover}
+.item button{padding:7px 16px;font-size:12px;letter-spacing:.05em;border:1px solid var(--line);background:none;border-radius:9px;cursor:pointer;color:var(--tea);transition:all .2s}
 .item button:hover{color:var(--ink);border-color:var(--ink)}
-.item button.danger:hover{color:#A0522D;border-color:#A0522D}
-#adminList .empty{color:var(--tea);text-align:center;padding:36px 0;letter-spacing:.15em}
+.item button.danger:hover{color:#fff;border-color:#A0522D;background:#A0522D}
+#adminList .empty{color:var(--tea);text-align:center;padding:40px 0;letter-spacing:.15em}
 .toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 28px;border-radius:999px;font-size:13px;letter-spacing:.1em;opacity:0;transition:opacity .5s;pointer-events:none;z-index:99}
 .toast.on{opacity:.95}
 @media(max-width:560px){.row2{grid-template-columns:1fr}}
@@ -98,7 +103,7 @@ textarea{min-height:110px;resize:vertical}
 </header>
 
 <div class="wrap">
-  <h3 class="sec">记 录 成 长</h3>
+  <h3 class="sec"><span class="line"></span>记 录 成 长<span class="line"></span></h3>
   <form id="entryForm">
     <div class="row2">
       <div><label class="t">标题（必填）</label><input id="fTitle" placeholder="例如：第一次微笑"></div>
@@ -106,13 +111,13 @@ textarea{min-height:110px;resize:vertical}
     </div>
     <div><label class="t">文字说明</label><textarea id="fContent" placeholder="今天发生了什么……"></textarea></div>
     <div>
-      <label class="t">照片（浏览器本地压缩为 WebP，单张 ≤200KB，可反复添加，累计保留）</label>
+      <label class="t">照片（本地压缩为 WebP，单张 ≤200KB，可反复添加、累计保留，点击 ✕ 删除）</label>
       <label id="fileBtn">选择照片（可多选，继续添加）<input id="fImgs" type="file" accept="image/*" multiple hidden></label>
       <div id="thumbBar"></div>
     </div>
     <div>
       <label class="t">极短留念片段（≤30秒，≤5MB；更长请传B站）</label>
-      <input id="fVideo" type="video/*,video/mp4">
+      <input id="fVideo" type="file" accept="video/mp4">
       <div class="hint" id="vHint">未选择</div>
     </div>
     <div>
@@ -124,7 +129,7 @@ textarea{min-height:110px;resize:vertical}
     <div id="saying"></div>
   </form>
 
-  <h3 class="sec">已 有 记 录</h3>
+  <h3 class="sec"><span class="line"></span>已 有 记 录<span class="line"></span></h3>
   <div id="adminList"></div>
 </div>
 </div>
@@ -153,9 +158,10 @@ const API_BASE = 'https://rxapi.firstblade.site'; // ← 改成你的 Worker 域
 const SAYINGS = ['歇心一处，无事不办。','水止月现，念息心明。','不急不躁，慢慢长大。','记录的此刻，即是安住的此刻。','狂心顿歇，当下即是。','愿你慢慢长大，愿我们陪你一起，狂性自歇。'];
 let token = localStorage.getItem('rx_token') || '';
 let editingId = null;
-let pickedFiles = [];      // 新增的待上传图片 {blob,name}
-let existingMedia = [];    // 编辑时已有的媒体（含图片），全程累计保留
+let pickedFiles = [];      // 本次新选的待上传图片 {blob,name}
+let existingMedia = [];    // 编辑时已有的媒体（全程累计保留，可删除其中项）
 let videoFile = null;
+let allEntries = [];       // 缓存列表，供编辑载入
 const $ = id => document.getElementById(id);
 
 function toast(msg){
@@ -216,33 +222,72 @@ async function compressImage(file){
   return blob;
 }
 
-// 渲染缩略图列表（含新增图片 + 已有图片，每张带删除按钮）
+/* ---------- 缩略图渲染（核心：删除功能） ----------
+   用事件委托绑定删除：删除按钮统一在 thumbBar 上监听，
+   彻底避免动态元素绑定失效的问题。
+-------------------------------------- */
 function renderThumbs(){
   const bar = $('thumbBar'); bar.innerHTML = '';
-  // newFlag: true = 本次新选（待上传），false = 已有（来自服务端）
+  // 合并：原图（existingMedia）+ 新图（pickedFiles），每项带 stable id
   const all = [
-    ...existingMedia.map(m=>({...m, newFlag:false})),
-    ...pickedFiles.map(f=>({type:'image', blob:f.blob, name:f.name, newFlag:true}))
+    ...existingMedia.map((m, i)=>({ kind:'existing', ref:m, id:'ex'+i })),
+    ...pickedFiles.map((f, i)=>({ kind:'picked', ref:f, id:'pk'+i }))
   ];
-  all.forEach((item, idx)=>{
-    const wrap = document.createElement('div'); wrap.className='th-item';
+  all.forEach(item=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'th-item' + (item.kind==='picked' ? ' is-new' : '');
+    wrap.dataset.id = item.id; wrap.dataset.kind = item.kind;
+
     const img = document.createElement('img');
-    img.src = item.newFlag ? URL.createObjectURL(item.blob) : API_BASE+item.url;
+    img.src = item.kind==='picked' ? URL.createObjectURL(item.ref.blob) : API_BASE+item.ref.url;
     img.onclick = ()=>openImgModal(img.src);
     wrap.appendChild(img);
+
     const tag = document.createElement('span'); tag.className='tag';
-    tag.textContent = item.type==='video' ? '视频' : (item.type==='bili' ? 'B站' : (item.newFlag?'新':'原'));
+    tag.textContent = item.ref.type==='video' ? '视频' : (item.ref.type==='bili' ? 'B站' : (item.kind==='picked'?'新':'原'));
     wrap.appendChild(tag);
-    const del = document.createElement('button'); del.className='del'; del.textContent='✕';
-    del.onclick = ()=>{
-      if(item.newFlag){ pickedFiles = pickedFiles.filter(f=>f!==item.blob && f.name!==item.name); }
-      else { existingMedia = existingMedia.filter(m=>m!==item); }
-      renderThumbs();
+
+    const del = document.createElement('button');
+    del.className = 'del'; del.type='button'; del.textContent='✕';
+    del.title = '删除这张';
+    del.onclick = e=>{
+      e.stopPropagation();
+      if(item.kind==='picked'){
+        // 从待上传列表中移除（按对象引用精确匹配）
+        pickedFiles = pickedFiles.filter(x=>x!==item.ref);
+      } else {
+        // 从已有媒体中移除
+        existingMedia = existingMedia.filter(x=>x!==item.ref);
+      }
+      renderThumbs(); // 重渲染，无需重新绑定——靠下方事件委托
+      updateProg();
     };
     wrap.appendChild(del);
     bar.appendChild(wrap);
   });
   if(!all.length){ const e=document.createElement('span'); e.className='thv'; e.textContent='暂无媒体'; bar.appendChild(e); }
+}
+
+// 统一用事件委托监听删除（兜底，双重保障）
+$('thumbBar').addEventListener('click', e=>{
+  const del = e.target.closest('.del');
+  if(!del) return;
+  const item = del.closest('.th-item');
+  if(!item) return;
+  if(item.dataset.kind==='picked'){
+    const idx = pickedFiles.findIndex((f,i)=>('pk'+i)===item.dataset.id);
+    if(idx>=0) pickedFiles.splice(idx,1);
+  } else {
+    const idx = existingMedia.findIndex((m,i)=>('ex'+i)===item.dataset.id);
+    if(idx>=0) existingMedia.splice(idx,1);
+  }
+  renderThumbs();
+  updateProg();
+});
+
+function updateProg(){
+  const totalKB = pickedFiles.reduce((a,b)=>a+b.blob.size,0);
+  $('prog').textContent = pickedFiles.length ? ('本次新增 '+pickedFiles.length+' 张（约 '+Math.round(totalKB/1024)+' KB）') : '';
 }
 
 $('fImgs').addEventListener('change', async e=>{
@@ -255,7 +300,7 @@ $('fImgs').addEventListener('change', async e=>{
     }catch(err){ toast(err.message); }
   }
   renderThumbs();
-  $('prog').textContent = pickedFiles.length ? ('本次新增 '+pickedFiles.length+' 张照片（合计约 '+Math.round(pickedFiles.reduce((a,b)=>a+b.blob.size,0)/1024)+' KB）') : '';
+  updateProg();
   e.target.value = ''; // 清空选择，允许重复选同一批
 });
 
@@ -342,8 +387,9 @@ async function loadAdminList(){
   if(r.status === 401){ logout(); return; }
   const d = await r.json();
   const box = $('adminList');
-  if(!d.list || !d.list.length){ box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
-  box.innerHTML = d.list.map(e=>{
+  allEntries = d.list || [];
+  if(!allEntries.length){ box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  box.innerHTML = allEntries.map(e=>{
     const imgs = e.media.filter(m=>m.type==='image').slice(0,3);
     const extra = e.media.length - imgs.length;
     return `<div class="item">
@@ -361,43 +407,43 @@ async function loadAdminList(){
     const r = await fetch(API_BASE+'/api/entries/'+b.dataset.del, { method:'DELETE', headers: authH() });
     if(r.ok){ toast('已删除'); loadAdminList(); } else toast('删除失败');
   }));
-  box.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>loadForEdit(d.list.find(x=>x.id==b.dataset.edit))));
+  box.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>{
+    const entry = allEntries.find(x=>String(x.id)===String(b.dataset.edit));
+    if(entry) loadForEdit(entry);
+  }));
 }
 
 function loadForEdit(e){
   editingId = e.id;
   $('fTitle').value = e.title; $('fDate').value = e.event_date; $('fContent').value = e.content || '';
-  const bilis = e.media.filter(m=>m.type==='bili').map(m=>'https://www.bilibili.com/video/'+m.bvid);
+  const bilis = (e.media||[]).filter(m=>m.type==='bili').map(m=>'https://www.bilibili.com/video/'+m.bvid);
   $('fBili').value = bilis.join('\n');
-  // 关键：把已有媒体完整保留到 existingMedia，作为累计基础
-  existingMedia = (e.media || []).map(m=>({ type:m.type, key:m.key, url:m.url, bvid:m.bvid }));
   pickedFiles = []; videoFile = null; $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
+
+  // 关键：把已有媒体完整拷进 existingMedia（含图片/B站），全程累计保留
+  existingMedia = (e.media||[]).filter(m=>m.type==='image' || m.type==='bili').map(m=>({
+    type: m.type, key: m.key, url: m.url, bvid: m.bvid
+  }));
   renderThumbs();
+
   window.scrollTo({top:0, behavior:'smooth'});
   $('saveBtn').textContent = '更 新 这 一 刻';
-  toast('已载入编辑，原有图片保留；新选照片将追加，点 ✕ 可删除任意一张');
+  toast('已载入编辑：原图累计保留，可删除或继续添加');
 }
 
-/* ---------- 导出 ---------- */
-function doExport(fmt){
-  fetch(API_BASE+'/api/entries?size=1000', { headers: authH() }).then(r=>r.json()).then(d=>{
-    const list = d.list || [];
-    if(fmt==='json'){
-      download('ruoxie.json', JSON.stringify(list, null, 2), 'application/json');
-    }else{
-      const md = list.map(e=>{
-        const imgs = (e.media||[]).filter(m=>m.type==='image').map(m=>'![]('+API_BASE+m.url+')').join('\n');
-        const bilis = (e.media||[]).filter(m=>m.type==='bili').map(m=>'- '+m.bvid).join('\n');
-        return `# ${e.title}\n\n> ${e.event_date}\n\n${e.content||''}\n\n${imgs}\n\n${bilis}`;
-      }).join('\n\n---\n\n');
-      download('ruoxie.md', md, 'text/markdown');
-    }
-    toast('导出完成');
-  }).catch(()=>toast('导出失败'));
+/* ---------- 导出备份 ---------- */
+async function doExport(kind){
+  const r = await fetch(API_BASE+'/api/export', { headers: authH() });
+  if(!r.ok){ toast('导出失败，请重新登录'); return; }
+  const d = await r.json();
+  const stamp = new Date().toISOString().slice(0,10);
+  if(kind==='json') download('成长足迹备份-'+stamp+'.json', JSON.stringify(d.json, null, 2), 'application/json');
+  else download('成长足迹备份-'+stamp+'.md', d.markdown, 'text/markdown');
+  toast('已导出 '+d.count+' 条记录');
 }
-function download(name, text, mime){
+function download(name, text, type){
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+  a.href = URL.createObjectURL(new Blob([text], { type }));
   a.download = name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
 }
