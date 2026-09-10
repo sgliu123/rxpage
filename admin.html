@@ -42,8 +42,13 @@ textarea{min-height:110px;resize:vertical}
 .hint{font-size:12px;color:var(--tea)}
 #fileBtn{display:inline-block;padding:12px;border:1px dashed var(--tea);border-radius:10px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
 #fileBtn:hover{border-color:var(--ink);color:var(--ink)}
-#thumbBar{display:flex;flex-wrap:wrap;gap:10px}
-#thumbBar .th{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+/* 缩略图：放大区域 + 删除按钮 */
+#thumbBar{display:flex;flex-wrap:wrap;gap:12px}
+#thumbBar .th-item{position:relative;width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--line)}
+#thumbBar .th-item img{width:100%;height:100%;object-fit:cover;display:block}
+#thumbBar .th-item .del{position:absolute;top:4px;right:4px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#thumbBar .th-item .del:hover{background:#A0522D}
+#thumbBar .th-item .tag{position:absolute;bottom:4px;left:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);padding:1px 5px;border-radius:4px;max-width:100%;overflow:hidden;white-space:nowrap}
 #thumbBar .thv{font-size:12px;color:var(--tea);align-self:center}
 #prog{font-size:13px;color:var(--tea);min-height:20px}
 #saying{margin-top:18px;text-align:center;color:var(--tea);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
@@ -101,13 +106,13 @@ textarea{min-height:110px;resize:vertical}
     </div>
     <div><label class="t">文字说明</label><textarea id="fContent" placeholder="今天发生了什么……"></textarea></div>
     <div>
-      <label class="t">照片（浏览器本地压缩为 WebP，单张 ≤200KB）</label>
-      <label id="fileBtn">选择照片（可多选）<input id="fImgs" type="file" accept="image/*" multiple hidden></label>
+      <label class="t">照片（浏览器本地压缩为 WebP，单张 ≤200KB，可反复添加，累计保留）</label>
+      <label id="fileBtn">选择照片（可多选，继续添加）<input id="fImgs" type="file" accept="image/*" multiple hidden></label>
       <div id="thumbBar"></div>
     </div>
     <div>
       <label class="t">极短留念片段（≤30秒，≤5MB；更长请传B站）</label>
-      <input id="fVideo" type="file" accept="video/mp4">
+      <input id="fVideo" type="video/*,video/mp4">
       <div class="hint" id="vHint">未选择</div>
     </div>
     <div>
@@ -126,12 +131,30 @@ textarea{min-height:110px;resize:vertical}
 
 <div class="toast" id="toast"></div>
 
+<!-- 图片预览模态框 -->
+<div id="imgModal" class="hide" onclick="if(event.target===this)closeImgModal()">
+  <span class="close" onclick="closeImgModal()">✕</span>
+  <img id="imgModalSrc" src="" alt="">
+</div>
+<style>
+#imgModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+#imgModal img{max-width:95vw;max-height:92vh;object-fit:contain;border-radius:8px;background:#000}
+#imgModal .close{position:absolute;top:20px;right:26px;width:38px;height:38px;font-size:20px;color:#fff;background:rgba(255,255,255,.15);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#imgModal .close:hover{background:rgba(255,255,255,.3)}
+</style>
+<script>
+function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.remove('hide')}
+function closeImgModal(){document.getElementById('imgModal').classList.add('hide')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgModal()});
+</script>
+
 <script>
 const API_BASE = 'https://rxapi.firstblade.site'; // ← 改成你的 Worker 域名
 const SAYINGS = ['歇心一处，无事不办。','水止月现，念息心明。','不急不躁，慢慢长大。','记录的此刻，即是安住的此刻。','狂心顿歇，当下即是。','愿你慢慢长大，愿我们陪你一起，狂性自歇。'];
 let token = localStorage.getItem('rx_token') || '';
 let editingId = null;
-let pickedFiles = [];      // 待压缩图片 File 列表
+let pickedFiles = [];      // 新增的待上传图片 {blob,name}
+let existingMedia = [];    // 编辑时已有的媒体（含图片），全程累计保留
 let videoFile = null;
 const $ = id => document.getElementById(id);
 
@@ -145,6 +168,7 @@ function saying(){
   setTimeout(()=>el.classList.remove('on'), 6000);
 }
 function authH(){ return { 'Authorization':'Bearer '+token }; }
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
 /* ---------- 登录 ---------- */
 $('loginForm').addEventListener('submit', async e=>{
@@ -192,20 +216,47 @@ async function compressImage(file){
   return blob;
 }
 
+// 渲染缩略图列表（含新增图片 + 已有图片，每张带删除按钮）
+function renderThumbs(){
+  const bar = $('thumbBar'); bar.innerHTML = '';
+  // newFlag: true = 本次新选（待上传），false = 已有（来自服务端）
+  const all = [
+    ...existingMedia.map(m=>({...m, newFlag:false})),
+    ...pickedFiles.map(f=>({type:'image', blob:f.blob, name:f.name, newFlag:true}))
+  ];
+  all.forEach((item, idx)=>{
+    const wrap = document.createElement('div'); wrap.className='th-item';
+    const img = document.createElement('img');
+    img.src = item.newFlag ? URL.createObjectURL(item.blob) : API_BASE+item.url;
+    img.onclick = ()=>openImgModal(img.src);
+    wrap.appendChild(img);
+    const tag = document.createElement('span'); tag.className='tag';
+    tag.textContent = item.type==='video' ? '视频' : (item.type==='bili' ? 'B站' : (item.newFlag?'新':'原'));
+    wrap.appendChild(tag);
+    const del = document.createElement('button'); del.className='del'; del.textContent='✕';
+    del.onclick = ()=>{
+      if(item.newFlag){ pickedFiles = pickedFiles.filter(f=>f!==item.blob && f.name!==item.name); }
+      else { existingMedia = existingMedia.filter(m=>m!==item); }
+      renderThumbs();
+    };
+    wrap.appendChild(del);
+    bar.appendChild(wrap);
+  });
+  if(!all.length){ const e=document.createElement('span'); e.className='thv'; e.textContent='暂无媒体'; bar.appendChild(e); }
+}
+
 $('fImgs').addEventListener('change', async e=>{
   const files = [...e.target.files];
-  $('thumbBar').innerHTML = ''; pickedFiles = [];
   for (const f of files.slice(0, 30)){
     $('prog').textContent = '正在本地压缩 '+f.name+' …';
     try{
       const blob = await compressImage(f);
       pickedFiles.push({ blob, name: f.name });
-      const img = document.createElement('img');
-      img.className = 'th'; img.src = URL.createObjectURL(blob);
-      $('thumbBar').appendChild(img);
     }catch(err){ toast(err.message); }
   }
-  $('prog').textContent = '共 '+pickedFiles.length+' 张照片已就绪（压缩后合计约 '+Math.round(pickedFiles.reduce((a,b)=>a+b.blob.size,0)/1024)+' KB）';
+  renderThumbs();
+  $('prog').textContent = pickedFiles.length ? ('本次新增 '+pickedFiles.length+' 张照片（合计约 '+Math.round(pickedFiles.reduce((a,b)=>a+b.blob.size,0)/1024)+' KB）') : '';
+  e.target.value = ''; // 清空选择，允许重复选同一批
 });
 
 $('fVideo').addEventListener('change', e=>{
@@ -241,6 +292,10 @@ $('entryForm').addEventListener('submit', async e=>{
   $('saveBtn').disabled = true;
   try{
     const media = [];
+    // 编辑时：保留未被删除的原有媒体（图片/B站），再追加本次新上传的
+    if(editingId){
+      existingMedia.forEach(m=>{ if(m.type!=='video') media.push({ type:m.type, key:m.key, bvid:m.bvid }); });
+    }
     for (let i=0; i<pickedFiles.length; i++){
       $('prog').textContent = '上传照片 '+(i+1)+'/'+pickedFiles.length+' …';
       const d = await uploadBlob(pickedFiles[i].blob, 'webp');
@@ -273,7 +328,7 @@ $('entryForm').addEventListener('submit', async e=>{
 });
 
 function resetForm(){
-  editingId = null; pickedFiles = []; videoFile = null;
+  editingId = null; pickedFiles = []; existingMedia = []; videoFile = null;
   $('fTitle').value=''; $('fContent').value=''; $('fBili').value='';
   $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
   $('thumbBar').innerHTML=''; $('prog').textContent='';
@@ -314,29 +369,35 @@ function loadForEdit(e){
   $('fTitle').value = e.title; $('fDate').value = e.event_date; $('fContent').value = e.content || '';
   const bilis = e.media.filter(m=>m.type==='bili').map(m=>'https://www.bilibili.com/video/'+m.bvid);
   $('fBili').value = bilis.join('\n');
+  // 关键：把已有媒体完整保留到 existingMedia，作为累计基础
+  existingMedia = (e.media || []).map(m=>({ type:m.type, key:m.key, url:m.url, bvid:m.bvid }));
   pickedFiles = []; videoFile = null; $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
-  $('thumbBar').innerHTML = e.media.filter(m=>m.type==='image').map(m=>`<img class="th" src="${API_BASE}${m.url}">`).join('')
-    + (e.media.some(m=>m.type==='video') ? '<span class="thv">原视频保留</span>' : '');
+  renderThumbs();
   window.scrollTo({top:0, behavior:'smooth'});
   $('saveBtn').textContent = '更 新 这 一 刻';
-  toast('已载入编辑，原有图片保留；新选照片将追加');
+  toast('已载入编辑，原有图片保留；新选照片将追加，点 ✕ 可删除任意一张');
 }
 
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-/* ---------- 导出备份 ---------- */
-async function doExport(kind){
-  const r = await fetch(API_BASE+'/api/export', { headers: authH() });
-  if(!r.ok){ toast('导出失败，请重新登录'); return; }
-  const d = await r.json();
-  const stamp = new Date().toISOString().slice(0,10);
-  if(kind==='json') download('成长足迹备份-'+stamp+'.json', JSON.stringify(d.json, null, 2), 'application/json');
-  else download('成长足迹备份-'+stamp+'.md', d.markdown, 'text/markdown');
-  toast('已导出 '+d.count+' 条记录');
+/* ---------- 导出 ---------- */
+function doExport(fmt){
+  fetch(API_BASE+'/api/entries?size=1000', { headers: authH() }).then(r=>r.json()).then(d=>{
+    const list = d.list || [];
+    if(fmt==='json'){
+      download('ruoxie.json', JSON.stringify(list, null, 2), 'application/json');
+    }else{
+      const md = list.map(e=>{
+        const imgs = (e.media||[]).filter(m=>m.type==='image').map(m=>'![]('+API_BASE+m.url+')').join('\n');
+        const bilis = (e.media||[]).filter(m=>m.type==='bili').map(m=>'- '+m.bvid).join('\n');
+        return `# ${e.title}\n\n> ${e.event_date}\n\n${e.content||''}\n\n${imgs}\n\n${bilis}`;
+      }).join('\n\n---\n\n');
+      download('ruoxie.md', md, 'text/markdown');
+    }
+    toast('导出完成');
+  }).catch(()=>toast('导出失败'));
 }
-function download(name, text, type){
+function download(name, text, mime){
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.href = URL.createObjectURL(new Blob([text], {type:mime}));
   a.download = name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
 }

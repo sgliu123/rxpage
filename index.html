@@ -43,9 +43,11 @@ main{max-width:760px;margin:0 auto;padding:20px 20px 60px}
 .entry h2{font-size:19px;font-weight:600;letter-spacing:.04em}
 .entry .date{font-size:12.5px;color:var(--tea);letter-spacing:.12em;margin:4px 0 10px}
 .entry .content{white-space:pre-wrap;font-size:15px}
-.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
-.media img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;opacity:0;transition:opacity .8s ease;background:#EFEBE2}
+/* 图片网格：放大显示 + 可点击全图 */
+.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+.media img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;display:block;opacity:0;transition:opacity .8s ease,transform .3s ease;background:#EFEBE2;cursor:zoom-in}
 .media img.loaded{opacity:1}
+.media img:hover{transform:scale(1.02)}
 .media video{width:100%;border-radius:12px;margin-top:6px}
 .bili{grid-column:1/-1;margin-top:8px}
 .bili-btn{width:100%;padding:14px;border:1px dashed var(--tea);border-radius:12px;background:none;color:var(--tea);font-size:13px;letter-spacing:.1em;cursor:pointer;font-family:inherit}
@@ -56,9 +58,16 @@ main{max-width:760px;margin:0 auto;padding:20px 20px 60px}
 .more button:hover{background:var(--ink);color:var(--paper)}
 .empty{text-align:center;color:var(--tea);padding:80px 0;letter-spacing:.15em}
 
-/* 页脚 */
-footer{text-align:center;padding:50px 20px 70px;color:var(--tea);font-size:13px;letter-spacing:.15em;border-top:1px solid var(--line)}
-footer .foot-logo{width:40px;color:var(--tea);margin-bottom:14px}
+/* 图片全屏预览模态框 */
+#imgModal{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;opacity:0;pointer-events:none;transition:opacity .3s ease}
+#imgModal.on{opacity:1;pointer-events:auto}
+#imgModal img{max-width:96vw;max-height:94vh;object-fit:contain;border-radius:6px;background:#000;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+#imgModal .close{position:absolute;top:20px;right:26px;width:42px;height:42px;font-size:22px;color:#fff;background:rgba(255,255,255,.15);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#imgModal .close:hover{background:rgba(255,255,255,.3)}
+#imgModal .nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;font-size:24px;color:#fff;background:rgba(255,255,255,.12);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#imgModal .nav:hover{background:rgba(255,255,255,.28)}
+#imgModal .prev{left:24px}#imgModal .next{right:24px}
+@media(max-width:560px){#imgModal .nav{width:38px;height:38px;font-size:18px}.media{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 </style>
 </head>
 <body>
@@ -81,6 +90,14 @@ footer .foot-logo{width:40px;color:var(--tea);margin-bottom:14px}
 <main id="list"></main>
 <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">加载更多</button></div>
 
+<!-- 图片预览模态框（支持上/下张切换） -->
+<div id="imgModal">
+  <button class="close" onclick="closeImgModal()">✕</button>
+  <button class="nav prev" onclick="navImg(-1)">‹</button>
+  <img id="modalImg" src="" alt="">
+  <button class="nav next" onclick="navImg(1)">›</button>
+</div>
+
 <footer>
   <svg class="foot-logo" viewBox="0 0 96 96"><circle cx="48" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 66 Q48 60 74 66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
   <p>愿你慢慢长大，愿我们陪你一起，狂性自歇。</p>
@@ -93,6 +110,8 @@ const listEl = document.getElementById('list');
 const moreWrap = document.getElementById('moreWrap');
 let page = 1, loading = false, done = false;
 const SIZE = 20;
+let gallery = [];   // 当前页所有可预览图片 {url, title}
+let gIdx = 0;
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
@@ -102,7 +121,7 @@ function cardHTML(e){
   const vids = e.media.filter(m=>m.type==='video');
   const bilis = e.media.filter(m=>m.type==='bili');
   if(imgs.length) media += '<div class="media">'+imgs.map(m=>
-    `<img loading="lazy" src="${API_BASE}${m.url}" alt="${esc(e.title)}">`).join('')+'</div>';
+    `<img loading="lazy" src="${API_BASE}${m.url}" data-full="${API_BASE}${m.url}" alt="${esc(e.title)}" class="gimg">`).join('')+'</div>';
   if(vids.length) media += '<div class="media">'+vids.map(m=>
     `<video controls preload="none" src="${API_BASE}${m.url}"></video>`).join('')+'</div>';
   if(bilis.length) media += bilis.map(m=>
@@ -114,6 +133,30 @@ function cardHTML(e){
     ${media}
   </article>`;
 }
+
+/* ---------- 图片预览（点击全图 + 左右切换 + ESC关闭） ---------- */
+function openImgModal(src){
+  gIdx = gallery.findIndex(g=>g.url===src);
+  if(gIdx<0) gIdx = 0;
+  document.getElementById('modalImg').src = src;
+  document.getElementById('imgModal').classList.add('on');
+}
+function closeImgModal(){ document.getElementById('imgModal').classList.remove('on'); }
+function navImg(dir){
+  if(!gallery.length) return;
+  gIdx = (gIdx + dir + gallery.length) % gallery.length;
+  document.getElementById('modalImg').src = gallery[gIdx].url;
+}
+document.getElementById('imgModal').addEventListener('click', e=>{
+  if(e.target.id==='imgModal' || e.target.classList.contains('close')) closeImgModal();
+});
+document.addEventListener('keydown', e=>{
+  const modal = document.getElementById('imgModal');
+  if(!modal.classList.contains('on')) return;
+  if(e.key==='Escape') closeImgModal();
+  else if(e.key==='ArrowLeft') navImg(-1);
+  else if(e.key==='ArrowRight') navImg(1);
+});
 
 async function load(){
   if(loading||done) return;
@@ -127,8 +170,18 @@ async function load(){
       moreWrap.style.display='none';
       return;
     }
+    // 收集本页所有图片到 gallery（用于全屏切换）
+    d.list.forEach(e=>{
+      (e.media||[]).filter(m=>m.type==='image').forEach(m=>{
+        gallery.push({ url: API_BASE+m.url, title: e.title });
+      });
+    });
     listEl.insertAdjacentHTML('beforeend', d.list.map(cardHTML).join(''));
     observeCards();
+    // 绑定图片点击
+    listEl.querySelectorAll('.gimg').forEach(img=>{
+      img.addEventListener('click', ()=>openImgModal(img.dataset.full));
+    });
     if(d.page*d.size >= d.total){ done=true; moreWrap.style.display='none'; }
     else { moreWrap.style.display='block'; page++; }
   }catch(err){
