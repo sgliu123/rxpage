@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="rx-admin-build" content="20261003c-npmmirror">
 <title>后台 · 胡若歇成长足迹</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
@@ -166,6 +167,7 @@ textarea{min-height:110px;resize:vertical}
 #imgModal .close:hover{background:rgba(255,255,255,.3)}
 </style>
 <script>
+console.log('[rxpage] admin build 20261003c · 引擎链路: 本站Vendor → npmmirror → jsDelivr → unpkg');
 function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.remove('hide')}
 function closeImgModal(){document.getElementById('imgModal').classList.add('hide')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgModal()});
@@ -383,18 +385,35 @@ const FF_VER = '0.12.10', FF_CORE_VER = '0.12.6';
  *  1. 同站 vendor 的 UMD 主类（同源 classic worker 最稳），core 从 CDN 下载
  *  2. CDN esm 类 + UMD worker + esm core（jsDelivr → unpkg，国内相对可达）
  * core+ wasm 约 31MB，成功后写入 Cache API，同一浏览器以后免下载 */
-const FF_SOURCES = (()=>{
+const FF_SOURCES = (function(){
   const same = (p)=>new URL(p, location.href).href;
-  const umd = (cdn)=>cdn+'/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js';
+  const core = (ver, sub)=>'https://registry.npmmirror.com/@ffmpeg/core@'+ver+'/files/dist/'+sub;
+  /* 每 组候选 core 下载源（按国内可达性排序） */
+  const umdCores = [
+    core(FF_CORE_VER, 'umd/'),
+    'https://gcore.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/',
+    'https://testingcf.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/',
+    'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/'
+  ];
+  const esmCores = [
+    core(FF_CORE_VER, 'esm/'),
+    'https://gcore.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/',
+    'https://testingcf.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/',
+    'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/'
+  ];
   return [
-    { id:'本站vendor', kind:'umd', script: same('vendor/ffmpege/ffmpeg.js'),
-      base: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/' },
-    { id:'jsDelivr', kind:'esm', esmBase: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
-      worker: umd('https://cdn.jsdelivr.net'),
-      base: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/' },
-    { id:'unpkg', kind:'esm', esmBase: 'https://unpkg.com/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
-      worker: umd('https://unpkg.com'),
-      base: 'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/' },
+    { id:'本站+国内镜像', kind:'umd',
+      // 文件夹大小写兼容：仓库里大写/小写都能命中
+      scripts: [same('Vendor/ffmpege/ffmpeg.js'), same('vendor/ffmpege/ffmpeg.js')],
+      coreBases: umdCores },
+    { id:'jsDelivr 多节点', kind:'esm',
+      esmBase: 'https://gcore.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
+      worker: 'https://gcore.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js',
+      coreBases: esmCores },
+    { id:'unpkg', kind:'esm',
+      esmBase: 'https://unpkg.com/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
+      worker: 'https://unpkg.com/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js',
+      coreBases: [core(FF_CORE_VER, 'esm/'), 'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/'] },
   ];
 })();
 let ffmpegInst = null, ffmpegLoading = null;
@@ -488,30 +507,45 @@ async function loadFFmpegModule(src, onStatus){
 async function loadFFmpeg(onStatus){
   if(ffmpegInst) return ffmpegInst;
   if(ffmpegLoading) return ffmpegLoading;
+  /* 按 core 候选源逐个拉 core+wasm；某一候选成功就绪即用 */
+  const fetchCorePair = async (bases, onStatus)=>{
+    for(const base of bases){
+      const b = base.endsWith('/') ? base : base + '/';
+      try{
+        const coreURL = await fetchBlobURL(b + 'ffmpeg-core.js', 'text/javascript');
+        const wasmURL = await fetchBlobURL(b + 'ffmpeg-core.wasm', 'application/wasm');
+        return { coreURL, wasmURL, from: b };
+      }catch(e){ /* 换下一个候选源 */ }
+    }
+    throw new Error('core+wasm 所有候选源均下载失败');
+  };
   ffmpegLoading = (async ()=>{
     let lastErr = new Error('没有可用的转码引擎来源');
     for(const src of FF_SOURCES){
       try{
-        const baseURL = src.base.endsWith('/') ? src.base : src.base + '/';
         let FF, config;
         if(src.kind === 'umd'){
-          onStatus && onStatus('加载本地转码引擎（本站 ' + src.id + '）…');
-          await loadScript(src.script);
-          FF = (window.FFmpegWASM && window.FFmpegWASM.FFmpeg) || null;
+          onStatus && onStatus('加载本地转码引擎（' + src.id + '）…');
+          let mounted = false;
+          for(const s0 of src.scripts){
+            try{
+              await loadScript(s0);
+              if(window.FFmpegWASM && window.FFmpegWASM.FFmpeg){ mounted = true; break; }
+            }catch(e){ /* 404 换大小写变体重试 */ }
+          }
+          FF = mounted ? (window.FFmpegWASM && window.FFmpegWASM.FFmpeg) : null;
           if(!FF) throw new Error('UMD 主类未挂载');
           // UMD 主类会自动用同目录的 814.ffmpeg.js 起 classic worker，core 走 importScripts（UMD core）
-          const coreURL = await fetchBlobURL(baseURL + 'ffmpeg-core.js', 'text/javascript');
-          const wasmURL = await fetchBlobURL(baseURL + 'ffmpeg-core.wasm', 'application/wasm');
-          config = { coreURL, wasmURL };
+          const pair = await fetchCorePair(src.coreBases, onStatus);
+          config = { coreURL: pair.coreURL, wasmURL: pair.wasmURL };
         }else{
-          onStatus && onStatus('加载本地转码引擎（' + src.id + '，约31MB，首次较慢）…');
+          onStatus && onStatus('加载本地转码引擎（' + src.id + '）…');
           ({ FFmpeg: FF } = await loadFFmpegModule(src, onStatus));
           // esm 类以 module worker 启动：UMD 814 里 importScripts 会抛错并回退 dynamic import，
           // 动态导入模式下必须用 esm 版 core（有 default export）
-          const coreURL = await fetchBlobURL(baseURL + 'ffmpeg-core.js', 'text/javascript');
-          const wasmURL = await fetchBlobURL(baseURL + 'ffmpeg-core.wasm', 'application/wasm');
+          const pair = await fetchCorePair(src.coreBases, onStatus);
           const classWorkerURL = await fetchBlobURL(src.worker, 'text/javascript');
-          config = { coreURL, wasmURL, classWorkerURL };
+          config = { coreURL: pair.coreURL, wasmURL: pair.wasmURL, classWorkerURL };
         }
         const ff = new FF();
         ff.on('progress', ({ progress })=>{
