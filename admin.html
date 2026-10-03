@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="rx-admin-build" content="20261003c-npmmirror">
+<meta name="rx-admin-build" content="20261003d-selfhosted-core">
 <title>后台 · 胡若歇成长足迹</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
@@ -167,7 +167,7 @@ textarea{min-height:110px;resize:vertical}
 #imgModal .close:hover{background:rgba(255,255,255,.3)}
 </style>
 <script>
-console.log('[rxpage] admin build 20261003c · 引擎链路: 本站Vendor → npmmirror → jsDelivr → unpkg');
+console.log('[rxpage] admin build 20261003d · 引擎链路: 本站core分片 → npmmirror → jsDelivr → unpkg');
 function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.remove('hide')}
 function closeImgModal(){document.getElementById('imgModal').classList.add('hide')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgModal()});
@@ -388,9 +388,10 @@ const FF_VER = '0.12.10', FF_CORE_VER = '0.12.6';
 const FF_SOURCES = (function(){
   const same = (p)=>new URL(p, location.href).href;
   const core = (ver, sub)=>'https://registry.npmmirror.com/@ffmpeg/core@'+ver+'/files/dist/'+sub;
-  /* 每 组候选 core 下载源（按国内可达性排序） */
+  /* 每 组候选 core 下载源（同站优先，外网全挂也能用） */
   const umdCores = [
-    core(FF_CORE_VER, 'umd/'),
+    same('Vendor/core/'),                            // ≤25MB 分片托管，最稳
+    core(FF_CORE_VER, 'umd/'),                       // 国内 npm 镜像
     'https://gcore.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/',
     'https://testingcf.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/',
     'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/'
@@ -453,7 +454,25 @@ async function fetchChunked(url){
   return new Blob(parts, { type: 'application/wasm' });
 }
 
-/* 下载并转 blob URL（Cache API 缓存；>1MB 走分块） */
+/* 分片文件下载（同名 .part00/part01… 拼接）：用于把大文件拆小后同站托管 */
+async function fetchParts(url){
+  const parts = [];
+  for(let i = 0; i < 8; i++){
+    const part = url + '.part' + String(i).padStart(2, '0');
+    let r;
+    try{ r = await fetch(part); }catch(e){ r = null; }
+    if(!r || r.status === 404 || !r.ok){ if(i === 0) return null; break; }
+    parts.push(await r.arrayBuffer());
+  }
+  if(parts.length === 0) return null;
+  const total = parts.reduce((a,b)=>a+b.byteLength, 0);
+  const out = new Uint8Array(total);
+  let o = 0;
+  for(const p of parts){ out.set(new Uint8Array(p), o); o += p.byteLength; }
+  return out.buffer;
+}
+
+/* 下载并转 blob URL（Cache API 缓存；>1MB 优先分块/chunk，兜底分片拼接） */
 async function fetchBlobURL(url, mime){
   const signal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
     ? AbortSignal.timeout(120000) : undefined;
@@ -464,8 +483,17 @@ async function fetchBlobURL(url, mime){
     if(hit) blob = await hit.blob();
   }
   if(!blob){
-    blob = (url.endsWith('.wasm') ? await fetchChunked(url).catch(()=>null) : null)
-        || await (async ()=>{ const r = await fetch(url, {signal}); if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })();
+    let buf = null;
+    if(url.endsWith('.wasm')){
+      blob = await fetchChunked(url).catch(()=>null);
+      if(!blob) buf = await fetchParts(url).catch(()=>null);
+      if(buf) blob = new Blob([buf], { type: mime });
+    }
+    if(!blob){
+      const r = await fetch(url, { signal });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      blob = await r.blob();
+    }
     if(cache){ try{ await cache.put(url, new Response(blob, { status:200, statusText:'OK' })); }catch(e){} }
   }
   return URL.createObjectURL(new Blob([blob], { type: mime }));
