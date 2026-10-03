@@ -55,7 +55,7 @@ main{max-width:820px;margin:0 auto;padding:30px 20px 60px}
 .media img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;display:block;opacity:0;transition:opacity .8s ease,transform .35s ease,box-shadow .35s ease;background:#EFEBE2;cursor:zoom-in;box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .media img.loaded{opacity:1}
 .media img:hover{transform:scale(1.025);box-shadow:0 8px 24px rgba(0,0,0,.14)}
-.media video{width:100%;border-radius:14px;margin-top:6px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.media video{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;margin-top:6px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .bili{grid-column:1/-1;margin-top:8px}
 .bili-btn{width:100%;padding:16px;border:1.5px dashed var(--tea);border-radius:14px;background:none;color:var(--tea);font-size:14px;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:all .3s}
 .bili-btn:hover{color:var(--ink);border-color:var(--ink);background:rgba(160,82,45,.04)}
@@ -131,7 +131,7 @@ function cardHTML(e){
   if(imgs.length) media += '<div class="media">'+imgs.map(m=>
     `<img loading="lazy" src="${API_BASE}${m.url}" data-full="${API_BASE}${m.url}" alt="${esc(e.title)}" class="gimg">`).join('')+'</div>';
   if(vids.length) media += '<div class="media">'+vids.map(m=>
-    `<video controls preload="none" src="${API_BASE}${m.url}"></video>`).join('')+'</div>';
+    `<video controls playsinline preload="metadata" src="${API_BASE}${m.url}"></video>`).join('')+'</div>';
   if(bilis.length) media += bilis.map(m=>
     `<div class="bili"><button class="bili-btn" data-bv="${m.bvid}">▶ 播放 B 站视频（${m.bvid}）</button></div>`).join('');
   return `<article class="entry">

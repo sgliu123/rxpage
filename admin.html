@@ -41,19 +41,21 @@ h3.sec .line{flex:1;height:1px;background:var(--line)}
 label.t{font-size:13px;color:var(--tea);letter-spacing:.1em;margin-bottom:-6px;display:block}
 textarea{min-height:110px;resize:vertical}
 .hint{font-size:12px;color:var(--tea)}
-#fileBtn{display:block;padding:14px;border:1.5px dashed var(--tea);border-radius:12px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
-#fileBtn:hover{border-color:var(--ink);color:var(--ink);background:rgba(160,82,45,.04)}
+#fileBtn,#videoBtn{display:block;padding:14px;border:1.5px dashed var(--tea);border-radius:12px;color:var(--tea);font-size:13px;cursor:pointer;text-align:center;transition:all .3s}
+#fileBtn:hover,#videoBtn:hover{border-color:var(--ink);color:var(--ink);background:rgba(160,82,45,.04)}
+#videoBtn.disabled{opacity:.55;pointer-events:none}
 
 /* 缩略图 */
-#thumbBar{display:flex;flex-wrap:wrap;gap:12px;min-height:24px}
-#thumbBar .th-item{position:relative;width:116px;height:116px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--line);animation:pop .25s ease both}
+#thumbBar,#videoBar{display:flex;flex-wrap:wrap;gap:12px;min-height:24px}
+#videoBar{margin-top:10px}
+#thumbBar .th-item,#videoBar .th-item{position:relative;width:116px;height:116px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--line);animation:pop .25s ease both}
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
-#thumbBar .th-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
-#thumbBar .th-item .del{position:absolute;top:5px;right:5px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+#thumbBar .th-item img,#videoBar .th-item img,#videoBar .th-item video{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+#thumbBar .th-item .del,#videoBar .th-item .del{position:absolute;top:5px;right:5px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
 #thumbBar .th-item .del:hover{background:var(--accent)}
-#thumbBar .th-item .tag{position:absolute;bottom:5px;left:5px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:2px 6px;border-radius:5px}
-#thumbBar .th-item.is-new{outline:2px solid var(--accent);outline-offset:-2px}
-#thumbBar .thv{font-size:12px;color:var(--tea);align-self:center}
+#thumbBar .th-item .tag,#videoBar .th-item .tag{position:absolute;bottom:5px;left:5px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:2px 6px;border-radius:5px;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#thumbBar .th-item.is-new,#videoBar .th-item.is-new{outline:2px solid var(--accent);outline-offset:-2px}
+#thumbBar .thv,#videoBar .thv{font-size:12px;color:var(--tea);align-self:center}
 #prog{font-size:13px;color:var(--tea);min-height:20px}
 #saying{margin-top:8px;text-align:center;color:var(--accent);font-size:14px;letter-spacing:.15em;min-height:26px;opacity:0;transition:opacity 1.5s ease}
 #saying.on{opacity:1}
@@ -125,9 +127,10 @@ textarea{min-height:110px;resize:vertical}
       <div id="thumbBar"></div>
     </div>
     <div>
-      <label class="t">极短留念片段（≤30秒，≤5MB；更长请传B站）</label>
-      <input id="fVideo" type="file" accept="video/mp4">
-      <div class="hint" id="vHint">未选择</div>
+      <label class="t">本地视频（可多选、可反复添加；任意常见格式，保存前自动转码为 H.264 MP4；单段 ≤5MB，更长请传B站）</label>
+      <label id="videoBtn">选择视频（可多选，继续添加）<input id="fVideo" type="file" accept="video/*,.mp4,.m4v,.mov,.mkv,.avi,.webm,.3gp,.ts" multiple hidden></label>
+      <div class="hint" id="vHint">支持手机相机 mov / HEVC / mp4 / webm 等格式，自动转成通用可播放的 MP4</div>
+      <div id="videoBar" class="vid-bar"></div>
     </div>
     <!-- B站区域：改为输入框+添加按钮+标签列表 -->
     <div>
@@ -174,8 +177,11 @@ const SAYINGS = ['歇心一处，无事不办。','水止月现，念息心明�
 let token = localStorage.getItem('rx_token') || '';
 let editingId = null;
 let pickedFiles = [];      // 本次新选的待上传图片 {blob,name}
-let existingMedia = [];    // 编辑时已有的媒体（全程累计保留，可删除其中项）
-let videoFile = null;
+let existingMedia = [];    // 编辑时已有的图片/B站（全程累计保留，可删除其中项）
+let existingVideos = [];   // 编辑时已有的视频 {type,key,url}
+let videoPicked = [];      // 本次新选的待上传视频 {blob,name,note}
+const DEFAULT_VHINT = '支持手机相机 mov / HEVC / mp4 / webm 等格式，自动转成通用可播放的 MP4';
+const playItemOf = (blob, name, note) => ({ blob, name, note });
 let biliItems = [];        // 当前B站链接列表 {bvid, url}
 let allEntries = [];       // 缓存列表，供编辑载入
 const $ = id => document.getElementById(id);
@@ -278,6 +284,49 @@ function renderThumbs(){
   if(!all.length){ const e=document.createElement('span'); e.className='thv'; e.textContent='暂无媒体'; bar.appendChild(e); }
 }
 
+/* ---------- 视频缩略条（已有视频 + 本次新选） ---------- */
+function renderVideoBar(){
+  const bar = $('videoBar'); bar.innerHTML = '';
+  const all = [
+    ...existingVideos.map((m, i)=>({ kind:'existing', ref:m, id:'ev'+i })),
+    ...videoPicked.map((f, i)=>({ kind:'picked', ref:f, id:'vp'+i }))
+  ];
+  all.forEach(item=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'th-item' + (item.kind==='picked' ? ' is-new' : '');
+    wrap.dataset.id = item.id; wrap.dataset.kind = item.kind;
+
+    const v = document.createElement('video');
+    v.src = item.kind==='picked' ? URL.createObjectURL(item.ref.blob) : API_BASE+item.ref.url;
+    v.muted = true; v.playsInline = true; v.preload = 'metadata';
+    v.controls = false;
+    v.addEventListener('click', ()=>{ if(!v.paused) { v.pause(); v.currentTime = 0; } else v.play().catch(()=>{}); });
+    v.title = item.kind==='picked' ? ('本次新增：'+item.ref.name+(item.ref.note?'（'+item.ref.note+'）':'')) : '已有视频';
+    wrap.appendChild(v);
+
+    const tag = document.createElement('span'); tag.className='tag';
+    tag.textContent = item.kind==='picked'
+      ? (item.ref.note ? ('新·'+item.ref.note) : '新增')
+      : '视频';
+    wrap.appendChild(tag);
+
+    const del = document.createElement('button');
+    del.className = 'del'; del.type='button'; del.textContent='✕';
+    del.title = '删除这个视频';
+    del.onclick = e=>{
+      e.stopPropagation();
+      if(item.kind==='picked') videoPicked = videoPicked.filter(x=>x!==item.ref);
+      else existingVideos = existingVideos.filter(x=>x!==item.ref);
+      v.removeAttribute('src'); v.load();
+      renderVideoBar();
+      updateProg();
+    };
+    wrap.appendChild(del);
+    bar.appendChild(wrap);
+  });
+  if(!all.length){ const e=document.createElement('span'); e.className='thv'; e.textContent='暂无视频'; bar.appendChild(e); }
+}
+
 // 事件委托（兜底）
 $('thumbBar').addEventListener('click', e=>{
   const del = e.target.closest('.del');
@@ -296,8 +345,12 @@ $('thumbBar').addEventListener('click', e=>{
 });
 
 function updateProg(){
-  const totalKB = pickedFiles.reduce((a,b)=>a+b.blob.size,0);
-  $('prog').textContent = pickedFiles.length ? ('本次新增 '+pickedFiles.length+' 张（约 '+Math.round(totalKB/1024)+' KB）') : '';
+  const imgKB = pickedFiles.reduce((a,b)=>a+b.blob.size,0);
+  const vidMB = videoPicked.reduce((a,b)=>a+b.blob.size,0) / 1048576;
+  const parts = [];
+  if(pickedFiles.length) parts.push('照片 ×'+pickedFiles.length+'（约 '+Math.round(imgKB/1024)+' KB）');
+  if(videoPicked.length) parts.push('视频 ×'+videoPicked.length+'（约 '+vidMB.toFixed(1)+' MB）');
+  $('prog').textContent = parts.join(' · ');
 }
 
 $('fImgs').addEventListener('change', async e=>{
@@ -314,11 +367,315 @@ $('fImgs').addEventListener('change', async e=>{
   e.target.value = '';
 });
 
-$('fVideo').addEventListener('change', e=>{
-  videoFile = e.target.files[0] || null;
-  if(!videoFile){ $('vHint').textContent = '未选择'; return; }
-  if(videoFile.size > 5 * 1024 * 1024){ toast('视频超过 5MB，请本地压缩后再选'); e.target.value=''; videoFile=null; $('vHint').textContent='未选择'; return; }
-  $('vHint').textContent = '已选择：'+videoFile.name+'（'+(videoFile.size/1024/1024).toFixed(2)+' MB）';
+/* ---------- 视频格式探测与本地转码（保证前端可播放） ----------
+ * 手机相机常见的 .mov / HEVC 编码在 Chrome / 安卓 / 微信里都播不出画面，
+ * 且部分 mp4 的 moov 在文件尾（配合不支持 Range 的服务器，iOS 也播不了）。
+ * 所以选完视频先探测编码：
+ *   1. 已是 H.264+AAC 的 mp4      → 原样保留
+ *   2. 编码通用但 moov 在文件尾部 → 只重排封装（faststart，秒级、无损）
+ *   3. 其他编码（HEVC/mpeg4/webm…）或非 mp4 容器 → ffmpeg.wasm 本地转码为 H.264 MP4
+ */
+const VIDEO_MAX_IN = 200 * 1024 * 1024;   // 输入上限
+const VIDEO_MAX_OUT = 5 * 1024 * 1024;    // 落库上限（与原规则一致）
+const PLAYABLE_VCODECS = new Set(['avc1', 'avc3']); // H.264
+const FF_VER = '0.12.10', FF_CORE_VER = '0.12.6';
+/* 引擎加载策略，按序尝试，全部失败则原样上传兜底：
+ *  1. 同站 vendor 的 UMD 主类（同源 classic worker 最稳），core 从 CDN 下载
+ *  2. CDN esm 类 + UMD worker + esm core（jsDelivr → unpkg，国内相对可达）
+ * core+ wasm 约 31MB，成功后写入 Cache API，同一浏览器以后免下载 */
+const FF_SOURCES = (()=>{
+  const same = (p)=>new URL(p, location.href).href;
+  const umd = (cdn)=>cdn+'/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js';
+  return [
+    { id:'本站vendor', kind:'umd', script: same('vendor/ffmpege/ffmpeg.js'),
+      base: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/' },
+    { id:'jsDelivr', kind:'esm', esmBase: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
+      worker: umd('https://cdn.jsdelivr.net'),
+      base: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/' },
+    { id:'unpkg', kind:'esm', esmBase: 'https://unpkg.com/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
+      worker: umd('https://unpkg.com'),
+      base: 'https://unpkg.com/@ffmpeg/core@'+FF_CORE_VER+'/dist/esm/' },
+  ];
+})();
+let ffmpegInst = null, ffmpegLoading = null;
+
+/* 加载外部 <script>（失败不缓存，由调用方决定换源） */
+function loadScript(url){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = url; s.async = true;
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject(new Error('script ' + url));
+    document.head.appendChild(s);
+  });
+}
+
+/* 大文件分块下载（Range + 单块重试）：弱网下比整段下载稳得多 */
+async function fetchChunked(url){
+  const CH = 4 * 1024 * 1024;
+  const tryRange = (o)=>{
+    const end = Math.min(o + CH, 1e15) - 1;
+    return fetch(url, { headers:{ Range:'bytes='+o+'-'+end },
+      signal: (typeof AbortSignal!=='undefined'&&AbortSignal.timeout)?AbortSignal.timeout(60000):undefined });
+  };
+  const first = await tryRange(0);
+  if(!first.ok || first.status !== 206) return null; // 源不支持 Range → 交给整段下载
+  const total = parseInt((first.headers.get('content-range')||'').split('/')[1] || '0', 10);
+  const parts = [ await first.arrayBuffer() ];
+  let got = parts[0].byteLength;
+  if(!total || got > total) return null;
+  for(let off = got; off < total; off += CH){
+    const r = await tryRange(off);
+    if(!r.ok || r.status !== 206) throw new Error('分块 ' + off + ' 失败');
+    const buf = await r.arrayBuffer();
+    parts.push(buf); got += buf.byteLength;
+  }
+  if(got !== total) throw new Error('分块长度不符 ' + got + '/' + total);
+  return new Blob(parts, { type: 'application/wasm' });
+}
+
+/* 下载并转 blob URL（Cache API 缓存；>1MB 走分块） */
+async function fetchBlobURL(url, mime){
+  const signal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+    ? AbortSignal.timeout(120000) : undefined;
+  const cache = ('caches' in self) ? await caches.open('rx-ffmpeg-v1').catch(()=>null) : null;
+  let blob = null;
+  if(cache){
+    const hit = await cache.match(url);
+    if(hit) blob = await hit.blob();
+  }
+  if(!blob){
+    blob = (url.endsWith('.wasm') ? await fetchChunked(url).catch(()=>null) : null)
+        || await (async ()=>{ const r = await fetch(url, {signal}); if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })();
+    if(cache){ try{ await cache.put(url, new Response(blob, { status:200, statusText:'OK' })); }catch(e){} }
+  }
+  return URL.createObjectURL(new Blob([blob], { type: mime }));
+}
+
+/* CDN 的 esm 模块图很小（4 个文件）。
+ * 动态 import 整图在弱网容易整体失败且不可重试，
+ * 这里逐文件拉文本，内联拼成一个 blob module 再 import（每个文件可单独重试）。 */
+const ESM_CACHE = {};
+async function loadFFmpegModule(src, onStatus){
+  if(ESM_CACHE[src.esmBase]) return ESM_CACHE[src.esmBase];
+  const get = async (f)=>{
+    let e;
+    for(let i = 0; i < 3; i++){
+      try{
+        const r = await fetch(src.esmBase + f, {
+          signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined });
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return await r.text();
+      }catch(err){ e = err; await new Promise(res=>setTimeout(res, 800)); }
+    }
+    throw e;
+  };
+  const [konst, errors, utils, classes] = await Promise.all(
+    ['const.js','errors.js','utils.js','classes.js'].map(get));
+  const code = konst + '\n' + errors + '\n' + utils + '\n'
+    + classes.replace(/^import[^\n]*;\s*$/gm, '');
+  const url = URL.createObjectURL(new Blob([code], { type:'text/javascript' }));
+  try{
+    const mod = await import(url);
+    ESM_CACHE[src.esmBase] = mod;
+    return mod;
+  }catch(err){
+    URL.revokeObjectURL(url);
+    throw err;
+  }
+}
+
+async function loadFFmpeg(onStatus){
+  if(ffmpegInst) return ffmpegInst;
+  if(ffmpegLoading) return ffmpegLoading;
+  ffmpegLoading = (async ()=>{
+    let lastErr = new Error('没有可用的转码引擎来源');
+    for(const src of FF_SOURCES){
+      try{
+        const baseURL = src.base.endsWith('/') ? src.base : src.base + '/';
+        let FF, config;
+        if(src.kind === 'umd'){
+          onStatus && onStatus('加载本地转码引擎（本站 ' + src.id + '）…');
+          await loadScript(src.script);
+          FF = (window.FFmpegWASM && window.FFmpegWASM.FFmpeg) || null;
+          if(!FF) throw new Error('UMD 主类未挂载');
+          // UMD 主类会自动用同目录的 814.ffmpeg.js 起 classic worker，core 走 importScripts（UMD core）
+          const coreURL = await fetchBlobURL(baseURL + 'ffmpeg-core.js', 'text/javascript');
+          const wasmURL = await fetchBlobURL(baseURL + 'ffmpeg-core.wasm', 'application/wasm');
+          config = { coreURL, wasmURL };
+        }else{
+          onStatus && onStatus('加载本地转码引擎（' + src.id + '，约31MB，首次较慢）…');
+          ({ FFmpeg: FF } = await loadFFmpegModule(src, onStatus));
+          // esm 类以 module worker 启动：UMD 814 里 importScripts 会抛错并回退 dynamic import，
+          // 动态导入模式下必须用 esm 版 core（有 default export）
+          const coreURL = await fetchBlobURL(baseURL + 'ffmpeg-core.js', 'text/javascript');
+          const wasmURL = await fetchBlobURL(baseURL + 'ffmpeg-core.wasm', 'application/wasm');
+          const classWorkerURL = await fetchBlobURL(src.worker, 'text/javascript');
+          config = { coreURL, wasmURL, classWorkerURL };
+        }
+        const ff = new FF();
+        ff.on('progress', ({ progress })=>{
+          if(onStatus && progress > 0 && progress <= 1)
+            onStatus('转码中 ' + Math.round(progress * 100) + '% …');
+        });
+        await ff.load(config);
+        ffmpegInst = ff;
+        return ff;
+      }catch(err){
+        lastErr = err;
+        onStatus && onStatus('引擎源 '+src.id+' 不可用，切换下一个…');
+      }
+    }
+    throw lastErr;
+  })();
+  try{ return await ffmpegLoading; }
+  catch(err){ ffmpegLoading = null; throw err; }
+}
+
+/* 读完文件并解析 MP4 box：返回编解码器与 moov 位置 */
+async function probeMp4Codec(file){
+  const buf = await file.arrayBuffer();
+  const dv = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  const tag4 = (o)=>String.fromCharCode(u8[o],u8[o+1],u8[o+2],u8[o+3]);
+  let mdatOff = Infinity, moovOff = Infinity;
+  const codecs = { v: [], a: [] };
+  const walk = (off, end, inStsd)=>{
+    while(off + 8 <= end){
+      let size = dv.getUint32(off);
+      const typ = tag4(off + 4);
+      if(size === 1){ // 64bit 长度
+        if(off + 16 > end) return;
+        size = Number(dv.getBigUint64(off + 8));
+        if(size < 16) return;
+      }else if(size === 0){
+        size = end - off;
+      }
+      if(size < 8 || off + size > end) return;
+      if(typ === 'mdat') mdatOff = Math.min(mdatOff, off);
+      if(typ === 'moov') moovOff = Math.min(moovOff, off);
+      if(typ === 'stsd' && !inStsd){
+        walk(off + 16, off + size, true);           // 跳过 version/flags + entry_count
+      }else if(!inStsd && ['moov','trak','mdia','minf','stbl'].includes(typ)){
+        walk(off + 8, off + size, false);
+      }else if(inStsd){
+        if(['avc1','avc3','hvc1','hev1','mp4v','av01','vp09','vp08'].includes(typ)) codecs.v.push(typ);
+        if(['mp4a','opus','Opus','ac-3','ec-3','fLaC','alac','sowt','twos'].includes(typ)) codecs.a.push(typ);
+      }
+      off += size;
+    }
+  };
+  walk(0, buf.byteLength, false);
+  return {
+    vcodec: codecs.v[0] || null,
+    acodec: codecs.a[0] || null,
+    hasVideo: codecs.v.length > 0,
+    moovFirst: moovOff < mdatOff
+  };
+}
+
+/* H.264/AAC 但 moov 在尾部 → 只重排封装成 faststart（无损、秒级） */
+async function remuxFaststart(file, onStatus){
+  const ff = await loadFFmpeg(onStatus);
+  onStatus && onStatus('重排封装（faststart）…');
+  await ff.writeFile('in.mp4', await file.arrayBuffer());
+  try{
+    await ff.exec(['-y','-i','in.mp4','-c','copy','-movflags','+faststart','-f','mp4','out.mp4']);
+    const out = await ff.readFile('out.mp4');
+    if(!out || !out.length) throw new Error('重排输出为空');
+    return playItemOf(new Blob([out.buffer], { type:'video/mp4' }),
+      (file.name.replace(/\.[^.]+$/, '') || 'video') + '.mp4', 'faststart');
+  }finally{
+    ff.deleteFile('in.mp4').catch(()=>{});
+    ff.deleteFile('out.mp4').catch(()=>{});
+  }
+}
+
+/* 统一入口：把任意本地视频处理为可播放的 MP4；引擎不可用时原样上传兜底 */
+async function ensurePlayableMp4(file, onStatus){
+  const name = file.name || 'video';
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if(file.size > VIDEO_MAX_IN) throw new Error('太大（>200MB），请先在系统相册里裁剪或压缩');
+
+  let info = null;
+  if(/^\.(mp4|m4v|mov)$/.test('.' + ext) && file.size <= VIDEO_MAX_IN * 2){
+    try{ info = await probeMp4Codec(file); }catch(e){ info = null; }
+    if(info && info.vcodec && PLAYABLE_VCODECS.has(info.vcodec)
+        && (!info.acodec || info.acodec === 'mp4a' || info.acodec === 'Opus' || info.acodec === 'opus')
+        && info.hasVideo){
+      try{ return await remuxFaststart(file, onStatus); }
+      catch(e){ try{ return await transcodeToMp4(file, onStatus); }
+                catch(e2){ return fallbackKeep(file, onStatus, '转码失败，原样上传'); } }
+    }
+  }
+  try{ return await transcodeToMp4(file, onStatus); }
+  catch(e){
+    // 引擎加载失败（弱网/CDN 不通）：原样上传，至少不丢内容
+    return fallbackKeep(file, onStatus, '转码引擎不可用');
+  }
+}
+
+function fallbackKeep(file, onStatus, reason){
+  onStatus && onStatus('');
+  toast('「'+file.name+'」' + reason + '，部分设备可能无法播放');
+  return playItemOf(file, file.name, '原样');
+}
+
+/* ffmpeg.wasm 转码：H.264 Main + AAC + faststart，超过 5MB 自动加重压缩 */
+async function transcodeToMp4(file, onStatus){
+  const ff = await loadFFmpeg(onStatus);
+  const baseName = file.name.replace(/\.[^.]+$/, '') || 'video';
+  onStatus && onStatus('准备转码（约 ' + (file.size/1024/1024).toFixed(1) + ' MB）…');
+  await ff.writeFile('in.src', await file.arrayBuffer());
+  const crfs = [26, 30, 34, 38];
+  const scales = ["scale=min(1280\\,iw):-2", "scale=min(960\\,iw):-2"];
+  let outBytes = null;
+  for(const scale of scales){
+    for(const crf of crfs){
+      onStatus && onStatus('转码中（压到 ≤5MB）…');
+      await ff.exec([
+        '-y',
+        '-i','in.src',
+        '-c:v','libx264','-profile:v','main','-preset','veryfast','-crf',String(crf),
+        '-vf', scale, '-pix_fmt','yuv420p','-r','30',
+        '-c:a','aac','-b:a','96k','-ac','2','-ar','44100',
+        '-movflags','+faststart','-f','mp4','out.mp4'
+      ]);
+      const data = await ff.readFile('out.mp4');
+      if(!data || !data.length) throw new Error('转码输出为空');
+      if(data.length <= VIDEO_MAX_OUT){ outBytes = data; break; }
+      await ff.deleteFile('out.mp4');
+    }
+    if(outBytes) break;
+  }
+  ff.deleteFile('in.src').catch(()=>{});
+  ff.deleteFile('out.mp4').catch(()=>{});
+  if(!outBytes) throw new Error('压缩到 5MB 内仍失败，请裁短一点再传');
+  return playItemOf(new Blob([outBytes.buffer], { type:'video/mp4' }), baseName + '.mp4', 'H.264');
+}
+
+/* ---------- 本地视频多选/追加/删除 ---------- */
+$('fVideo').addEventListener('change', async e=>{
+  const files = [...e.target.files];
+  e.target.value = '';
+  if(!files.length) return;
+  $('videoBtn').classList.add('disabled');
+  let ok = 0, fail = 0;
+  for(const f of files.slice(0, 10)){
+    try{
+      const item = await ensurePlayableMp4(f, (msg)=>{ $('vHint').textContent = '「'+f.name+'」'+msg; });
+      videoPicked.push(item);
+      ok++;
+      $('vHint').textContent = DEFAULT_VHINT;
+    }catch(err){
+      fail++;
+      toast('「'+ (f.name||'视频') +'」'+ (err && err.message ? err.message : '处理失败'));
+    }
+  }
+  $('videoBtn').classList.remove('disabled');
+  if(fail) $('vHint').textContent = (ok ? ('已添加 '+ok+' 段，') : '') + fail + ' 段添加失败';
+  renderVideoBar();
+  updateProg();
 });
 
 /* ---------- B站多链接管理 ---------- */
@@ -384,24 +741,28 @@ function getBiliPayload(){
 
 $('entryForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  if(editingId === null && !pickedFiles.length && !videoFile && !biliItems.length && !$('fContent').value.trim()){
+  if(editingId === null && !pickedFiles.length && !videoPicked.length && !biliItems.length && !$('fContent').value.trim()){
     toast('请至少填写内容、选择照片或添加链接'); return;
   }
   $('saveBtn').disabled = true;
   try{
     const media = [];
-    // 编辑时：保留未被删除的原有媒体（图片/B站），再追加本次新上传的
+    // 编辑时：保留未被删除的原有媒体（图片/视频/B站），再追加本次新上传的
     if(editingId){
       existingMedia.forEach(m=>{ if(m.type!=='video') media.push({ type:m.type, key:m.key, bvid:m.bvid }); });
+      existingVideos.forEach(m=>{ media.push({ type:'video', key:m.key }); });
     }
     for (let i=0; i<pickedFiles.length; i++){
       $('prog').textContent = '上传照片 '+(i+1)+'/'+pickedFiles.length+' …';
       const d = await uploadBlob(pickedFiles[i].blob, 'webp');
       media.push({ type:'image', key:d.key });
     }
-    if(videoFile){
-      $('prog').textContent = '上传短视频 …';
-      const d = await uploadBlob(videoFile, 'mp4');
+    for (let i=0; i<videoPicked.length; i++){
+      $('prog').textContent = '上传视频 '+(i+1)+'/'+videoPicked.length+' …';
+      const item = videoPicked[i];
+      const ext = (item.note === '原样' && /\.[a-z0-9]{1,5}$/i.test(item.name || ''))
+        ? (item.name.split('.').pop() || 'mp4').toLowerCase() : 'mp4';
+      const d = await uploadBlob(item.blob, ext);
       media.push({ type:'video', key:d.key });
     }
     media.push(...getBiliPayload());
@@ -426,11 +787,13 @@ $('entryForm').addEventListener('submit', async e=>{
 });
 
 function resetForm(){
-  editingId = null; pickedFiles = []; existingMedia = []; videoFile = null;
+  editingId = null; pickedFiles = []; existingMedia = [];
+  existingVideos = []; videoPicked = [];
   biliItems = [];
   $('fTitle').value=''; $('fContent').value=''; $('biliInput').value='';
-  $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
-  $('thumbBar').innerHTML=''; $('biliTags').innerHTML=''; $('prog').textContent='';
+  $('fImgs').value=''; $('fVideo').value='';
+  $('vHint').textContent = DEFAULT_VHINT;
+  $('thumbBar').innerHTML=''; $('videoBar').innerHTML=''; $('biliTags').innerHTML=''; $('prog').textContent='';
   $('saveBtn').textContent = '保 存 这 一 刻';
   $('fDate').value = new Date().toISOString().slice(0,10);
 }
@@ -445,11 +808,12 @@ async function loadAdminList(){
   if(!allEntries.length){ box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
   box.innerHTML = allEntries.map(e=>{
     const imgs = e.media.filter(m=>m.type==='image').slice(0,3);
+    const vcnt = e.media.filter(m=>m.type==='video').length;
     const extra = e.media.length - imgs.length;
     return `<div class="item">
       <div class="info">
         <div class="t1">${esc(e.title)}</div>
-        <div class="t2">${e.event_date} · ${e.media.length} 个媒体</div>
+        <div class="t2">${e.event_date} · ${e.media.length} 个媒体${vcnt?` · 视频×${vcnt}`:''}</div>
       </div>
       <div class="thumbs">${imgs.map(m=>`<img src="${API_BASE}${m.url}" loading="lazy">`).join('')}${extra>0?`<span class="t2">+${extra}</span>`:''}</div>
       <button data-edit="${e.id}">编辑</button>
@@ -473,16 +837,22 @@ function loadForEdit(e){
   // 从media中提取B站链接
   biliItems = (e.media||[]).filter(m=>m.type==='bili').map(m=>({ bvid: m.bvid, url: 'https://www.bilibili.com/video/'+m.bvid }));
   renderBiliTags();
-  pickedFiles = []; videoFile = null; $('fImgs').value=''; $('fVideo').value=''; $('vHint').textContent='未选择';
+  pickedFiles = []; videoPicked = []; $('fImgs').value=''; $('fVideo').value='';
+  $('vHint').textContent = DEFAULT_VHINT;
 
   existingMedia = (e.media||[]).filter(m=>m.type==='image' || m.type==='bili').map(m=>({
     type: m.type, key: m.key, url: m.url, bvid: m.bvid
   }));
+  // 编辑时载入已有视频（此次不再被静默丢弃）
+  existingVideos = (e.media||[]).filter(m=>m.type==='video').map(m=>({
+    type: 'video', key: m.key, url: m.url
+  }));
   renderThumbs();
+  renderVideoBar();
 
   window.scrollTo({top:0, behavior:'smooth'});
   $('saveBtn').textContent = '更 新 这 一 刻';
-  toast('已载入编辑：原图累计保留，可删除或继续添加');
+  toast('已载入编辑：媒体累计保留，可删除或继续添加');
 }
 
 /* ---------- 导出备份 ---------- */
