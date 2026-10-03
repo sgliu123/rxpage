@@ -387,7 +387,7 @@ const FF_SOURCES = (()=>{
   const same = (p)=>new URL(p, location.href).href;
   const umd = (cdn)=>cdn+'/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js';
   return [
-    { id:'本站vendor', kind:'umd', script: same('vendor/ffmpege/ffmpeg.js'),
+    { id:'本站vendor', kind:'umd', script: same('Vendor/ffmpege/ffmpeg.js'),
       base: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@'+FF_CORE_VER+'/dist/umd/' },
     { id:'jsDelivr', kind:'esm', esmBase: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
       worker: umd('https://cdn.jsdelivr.net'),
