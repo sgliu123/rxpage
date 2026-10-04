@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="rx-admin-build" content="20261003d-selfhosted-core">
+<meta name="rx-admin-build" content="20261004a-fixed-engine">
 <title>后台 · 胡若歇成长足迹</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
@@ -86,7 +86,7 @@ textarea{min-height:110px;resize:vertical}
 .toast.on{opacity:.95}
 @media(max-width:560px){.row2{grid-template-columns:1fr}}
 </style>
-</head>
+<script src="/__vs_inspector__.js" defer></script></head>
 <body>
 
 <!-- 登录 -->
@@ -167,7 +167,7 @@ textarea{min-height:110px;resize:vertical}
 #imgModal .close:hover{background:rgba(255,255,255,.3)}
 </style>
 <script>
-console.log('[rxpage] admin build 20261003d · 引擎链路: 本站core分片 → npmmirror → jsDelivr → unpkg');
+console.log('[rxpage] admin build 20261004a · 引擎链路: 本站core分片 → npmmirror全套 → jsDelivr → unpkg · B站缩略/去重修复');
 function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.remove('hide')}
 function closeImgModal(){document.getElementById('imgModal').classList.add('hide')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgModal()});
@@ -407,6 +407,9 @@ const FF_SOURCES = (function(){
       // 文件夹大小写兼容：仓库里大写/小写都能命中
       scripts: [same('Vendor/ffmpege/ffmpeg.js'), same('vendor/ffmpege/ffmpeg.js')],
       coreBases: umdCores },
+    { id:'npmmirror 全套', kind:'umd',
+      scripts: ['https://registry.npmmirror.com/@ffmpeg/ffmpeg@'+FF_VER+'/files/dist/umd/ffmpeg.js'],
+      coreBases: [core(FF_CORE_VER, 'umd/')] },
     { id:'jsDelivr 多节点', kind:'esm',
       esmBase: 'https://gcore.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/esm/',
       worker: 'https://gcore.jsdelivr.net/npm/@ffmpeg/ffmpeg@'+FF_VER+'/dist/umd/814.ffmpeg.js',
@@ -667,13 +670,13 @@ async function ensurePlayableMp4(file, onStatus){
         && info.hasVideo){
       try{ return await remuxFaststart(file, onStatus); }
       catch(e){ try{ return await transcodeToMp4(file, onStatus); }
-                catch(e2){ return fallbackKeep(file, onStatus, '转码失败，原样上传'); } }
+                catch(e2){ return fallbackKeep(file, onStatus, '转码失败，原样上传(' + (e2 && e2.message || '未知') + ')'); } }
     }
   }
   try{ return await transcodeToMp4(file, onStatus); }
   catch(e){
     // 引擎加载失败（弱网/CDN 不通）：原样上传，至少不丢内容
-    return fallbackKeep(file, onStatus, '转码引擎不可用');
+    return fallbackKeep(file, onStatus, '转码引擎不可用(' + (e && e.message || '未知') + ')');
   }
 }
 
@@ -811,7 +814,7 @@ $('entryForm').addEventListener('submit', async e=>{
     const media = [];
     // 编辑时：保留未被删除的原有媒体（图片/视频/B站），再追加本次新上传的
     if(editingId){
-      existingMedia.forEach(m=>{ if(m.type!=='video') media.push({ type:m.type, key:m.key, bvid:m.bvid }); });
+      existingMedia.forEach(m=>{ if(m.type==='image') media.push({ type:m.type, key:m.key }); });
       existingVideos.forEach(m=>{ media.push({ type:'video', key:m.key }); });
     }
     for (let i=0; i<pickedFiles.length; i++){
@@ -902,7 +905,7 @@ function loadForEdit(e){
   pickedFiles = []; videoPicked = []; $('fImgs').value=''; $('fVideo').value='';
   $('vHint').textContent = DEFAULT_VHINT;
 
-  existingMedia = (e.media||[]).filter(m=>m.type==='image' || m.type==='bili').map(m=>({
+  existingMedia = (e.media||[]).filter(m=>m.type==='image').map(m=>({
     type: m.type, key: m.key, url: m.url, bvid: m.bvid
   }));
   // 编辑时载入已有视频（此次不再被静默丢弃）
